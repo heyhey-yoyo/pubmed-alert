@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pubmed-keyword-alert",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-31",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "head_sampling_rate": 1
+    }
+  },
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ALERT_COORDINATOR",
+        "class_name": "AlertCoordinator"
+      }
+    ]
+  },
+  "exports": {
+    "AlertCoordinator": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "vars": {
+    "APP_NAME": "PubMed 关键词提醒",
+    "SEARCH_WINDOW_DAYS": "7",
+    "SEARCH_OVERLAP_DAYS": "2",
+    "MAX_CATCHUP_DAYS": "365",
+    "MAX_RESULTS": "1000",
+    "REQUEST_TIMEOUT_MS": "15000"
+  }
+}
