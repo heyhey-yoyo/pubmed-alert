@@ -19,6 +19,7 @@ export function renderPage(appName: string, nonce: string): string {
     h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
     .lead { margin: 0 0 28px; max-width: 680px; color: #59657a; font-size: 17px; line-height: 1.7; }
     .card { background: #fff; border: 1px solid #dfe6f1; border-radius: 18px; padding: 24px; box-shadow: 0 18px 55px rgba(34,55,94,.08); }
+    [hidden] { display: none !important; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     .full { grid-column: 1 / -1; }
     label, .label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 800; color: #334155; }
@@ -34,10 +35,14 @@ export function renderPage(appName: string, nonce: string): string {
     button.danger { background: #fff1f2; color: #9f1239; }
     button:hover:not(:disabled) { transform: translateY(-1px); }
     button:disabled { opacity: .55; cursor: wait; transform: none; }
-    #status { margin-top: 18px; padding: 14px; border-radius: 10px; background: #f7f9fc; border: 1px solid #e2e8f0; min-height: 48px; color: #42516a; white-space: pre-wrap; line-height: 1.55; }
-    #status.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+    #status, #login-status { margin-top: 18px; padding: 14px; border-radius: 10px; background: #f7f9fc; border: 1px solid #e2e8f0; min-height: 48px; color: #42516a; white-space: pre-wrap; line-height: 1.55; }
+    #status.error, #login-status.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
     .meta { margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 18px; color: #64748b; font-size: 13px; }
     .meta div { overflow-wrap: anywhere; }
+    .login-card { max-width: 460px; margin: 0 auto; }
+    .login-card h2 { margin: 0 0 6px; font-size: 20px; }
+    .login-lead { margin: 0 0 18px; color: #59657a; font-size: 14px; line-height: 1.6; }
+    .login-card form button { width: 100%; margin-top: 18px; padding: 13px 16px; font-size: 15px; }
     footer { margin-top: 22px; color: #6b778c; font-size: 12px; line-height: 1.6; }
     footer a { color: inherit; }
     @media (max-width: 650px) { .grid, .meta { grid-template-columns: 1fr; } .full { grid-column: auto; } .card { padding: 19px; } }
@@ -50,15 +55,22 @@ export function renderPage(appName: string, nonce: string): string {
     <h1>${safeName}</h1>
     <p class="lead">设置一个 PubMed 检索式和收件邮箱。系统每小时检查一次，只有出现未见过的 PMID 才发送邮件。</p>
 
-    <section class="card" aria-labelledby="settings-title">
+    <section id="login-view" class="card login-card" aria-labelledby="login-title">
+      <h2 id="login-title">登录</h2>
+      <p class="login-lead">请输入管理员口令（Cloudflare Secret: ADMIN_TOKEN）以管理提醒设置。</p>
+      <form id="login-form">
+        <label for="token">管理员口令</label>
+        <input id="token" type="password" autocomplete="current-password" maxlength="512" placeholder="输入管理员口令" required />
+        <label class="remember"><input id="remember" type="checkbox" /> 在此设备长期记住口令（共享设备不建议）</label>
+        <div class="hint">默认仅保存在当前浏览器会话。管理员口令不会显示在状态中。</div>
+        <button class="primary" id="login-btn" type="submit">登录</button>
+      </form>
+      <div id="login-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="main-view" class="card" aria-labelledby="settings-title" hidden>
       <h2 id="settings-title" hidden>提醒设置</h2>
       <div class="grid">
-        <div class="full">
-          <label for="token">管理员口令</label>
-          <input id="token" type="password" autocomplete="current-password" maxlength="512" placeholder="Cloudflare Secret: ADMIN_TOKEN" />
-          <label class="remember"><input id="remember" type="checkbox" /> 在此设备长期记住口令（共享设备不建议）</label>
-          <div class="hint">默认仅保存在当前浏览器会话。管理员口令不会显示在状态中。</div>
-        </div>
         <div class="full">
           <label for="keyword">PubMed 关键词 / 检索式</label>
           <input id="keyword" type="text" maxlength="500" placeholder='例如：("spatial transcriptomics"[Title/Abstract]) AND cancer' />
@@ -79,9 +91,9 @@ export function renderPage(appName: string, nonce: string): string {
         <button id="check" type="button">立即检查</button>
         <button id="test" type="button">发送测试邮件</button>
         <button class="danger" id="rebaseline" type="button">重建基线</button>
-        <button id="clear-token" type="button">清除口令</button>
+        <button id="logout" type="button">退出登录</button>
       </div>
-      <div id="status" role="status" aria-live="polite">请输入管理员口令，然后读取状态或保存配置。</div>
+      <div id="status" role="status" aria-live="polite"></div>
       <div class="meta" id="meta" aria-label="运行状态"></div>
     </section>
 
@@ -91,6 +103,8 @@ export function renderPage(appName: string, nonce: string): string {
   const $ = (id) => document.getElementById(id);
   const tokenInput = $("token");
   const rememberInput = $("remember");
+  const loginView = $("login-view");
+  const mainView = $("main-view");
   const savedToken = localStorage.getItem("pubmed-alert-token");
   tokenInput.value = savedToken || sessionStorage.getItem("pubmed-alert-token") || "";
   rememberInput.checked = Boolean(savedToken);
@@ -115,6 +129,25 @@ export function renderPage(appName: string, nonce: string): string {
     status.textContent = message;
     status.classList.toggle("error", isError);
     status.setAttribute("role", isError ? "alert" : "status");
+  }
+
+  function loginMessage(message, isError = false) {
+    const line = $("login-status");
+    line.textContent = message;
+    line.classList.toggle("error", isError);
+    line.setAttribute("role", isError ? "alert" : "status");
+  }
+
+  function showMain() {
+    loginView.hidden = true;
+    mainView.hidden = false;
+  }
+
+  function showLogin(message, isError = false) {
+    mainView.hidden = true;
+    loginView.hidden = false;
+    if (message) loginMessage(message, isError);
+    tokenInput.focus();
   }
 
   async function api(path, options = {}) {
@@ -183,6 +216,30 @@ export function renderPage(appName: string, nonce: string): string {
     finally { setBusy(false); }
   }
 
+  async function attemptLogin() {
+    const token = tokenInput.value.trim();
+    if (!token) {
+      loginMessage("请先输入管理员口令。", true);
+      tokenInput.focus();
+      return;
+    }
+    $("login-btn").disabled = true;
+    try {
+      const data = await api("/api/status");
+      renderStatus(data);
+      showMain();
+    } catch (error) {
+      loginMessage(error.message || String(error), true);
+    } finally {
+      $("login-btn").disabled = false;
+    }
+  }
+
+  $("login-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    attemptLogin();
+  });
+
   $("load").addEventListener("click", () => run(async () => renderStatus(await api("/api/status"))));
 
   $("save").addEventListener("click", () => run(async () => {
@@ -208,17 +265,22 @@ export function renderPage(appName: string, nonce: string): string {
     renderStatus(await api("/api/status"));
   }));
 
-  $("clear-token").addEventListener("click", () => {
+  $("logout").addEventListener("click", () => {
     tokenInput.value = "";
     rememberInput.checked = false;
     localStorage.removeItem("pubmed-alert-token");
     sessionStorage.removeItem("pubmed-alert-token");
-    show("管理员口令已从浏览器中清除。");
-    tokenInput.focus();
+    showLogin("已退出登录。");
   });
 
   rememberInput.addEventListener("change", persistToken);
-  if (tokenInput.value) api("/api/status").then(renderStatus).catch(() => {});
+  if (tokenInput.value) {
+    api("/api/status")
+      .then((data) => { renderStatus(data); showMain(); })
+      .catch((error) => loginMessage((error && error.message) || "自动登录失败，请重新输入口令。", true));
+  } else {
+    tokenInput.focus();
+  }
 </script>
 </body>
 </html>`;
