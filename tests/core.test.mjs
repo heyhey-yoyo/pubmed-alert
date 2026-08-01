@@ -174,7 +174,9 @@ test("延迟重试成功后不把 PubMed 检索进度推进到重试时刻", asy
 test("PubMed ESearch 使用 Entry Date 窗口并解析 PMID", async () => {
   const originalFetch = globalThis.fetch;
   let requestBody = "";
+  let requestInit;
   globalThis.fetch = async (_input, init) => {
+    requestInit = init;
     requestBody = String(init?.body || "");
     return new Response(JSON.stringify({ esearchresult: { count: "2", idlist: ["20", "10"] } }), {
       status: 200,
@@ -187,6 +189,7 @@ test("PubMed ESearch 使用 Entry Date 窗口并解析 PMID", async () => {
       () => new Date("2026-07-31T12:00:00.000Z"),
     );
     const result = await gateway.search("cancer[Title]", "2026-07-30T12:00:00.000Z");
+    assert.equal(requestInit.redirect, "manual", "Workers 只支持 manual/follow，禁止用 Node 专属的 error");
     const params = new URLSearchParams(requestBody);
     assert.equal(params.get("db"), "pubmed");
     assert.equal(params.get("datetype"), "edat");

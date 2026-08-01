@@ -57,9 +57,11 @@ export async function fetchWithRetry(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      // Cloudflare Workers 只支持 "follow" 和 "manual"，不接受 Node 的 "error"。
+      // 用 "manual" 保持"不跟随外部重定向"的安全语义；3xx 会因 response.ok 为 false 而显式失败。
       const response = await fetch(input, {
         ...init,
-        redirect: "error",
+        redirect: "manual",
         signal: controller.signal,
       });
       if (response.ok) return response;
