@@ -13,7 +13,7 @@
 - 默认仅在 `sessionStorage` 保存管理员口令；可由用户选择长期记住
 - CSP、安全响应头、请求体大小限制、外部请求超时和有限重试
 - TypeScript 严格检查和核心逻辑回归测试
-- GitHub Actions 在 Pull Request 上检查，在 `main` 推送后部署
+- GitHub Actions 在 Pull Request 和推送时执行类型检查与测试；部署由 Cloudflare Workers Builds 自动完成
 
 ## 架构
 
@@ -133,20 +133,14 @@ npm run deploy
 
 重新建基线会把当前检索结果视为“已有”，因此不会补发历史论文。这是为了避免升级时一次性发送大量旧记录。
 
-## GitHub Actions 自动部署
+## GitHub Actions 自动检查与 Cloudflare 部署
 
 工作流位于 `.github/workflows/deploy.yml`：
 
-- Pull Request：类型检查和测试
-- 推送到 `main`：检查通过后部署
-- 手动运行：检查通过后部署
+- Pull Request 和推送到 `main`：运行类型检查和测试
+- 代码部署由 Cloudflare **Workers Builds** 完成：在 Cloudflare Dashboard（Workers & Pages → `pubmed-alert` → Settings → Builds）连接本仓库，Production branch 选择 `main`，构建命令填 `npm run check`（部署前先跑检查，失败则不会部署）
 
-在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中添加：
-
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-
-Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 `ADMIN_TOKEN`、`RESEND_API_KEY` 等仍保存在 Cloudflare Worker Secrets 中，不要写入仓库。
+无需在 GitHub 配置 Cloudflare Token。运行时的 `ADMIN_TOKEN`、`RESEND_API_KEY` 等仍保存在 Cloudflare Worker Secrets 中，不要写入仓库。
 
 工作流中的第三方 Actions 固定到完整提交 SHA，并关闭 checkout 凭据持久化。
 

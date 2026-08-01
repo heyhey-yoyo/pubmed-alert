@@ -1,4 +1,4 @@
-name: Check and deploy
+name: Check
 
 on:
   pull_request:
@@ -31,24 +31,3 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Typecheck and test
         run: npm run check
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    needs: check
-    runs-on: ubuntu-24.04
-    environment: production
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22.17.1
-          package-manager-cache: false
-      - name: Deploy with pinned Wrangler
-        run: npx --yes wrangler@4.117.0 deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
