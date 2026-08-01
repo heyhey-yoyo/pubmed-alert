@@ -32,7 +32,7 @@
     "APP_NAME": "PubMed 关键词提醒",
     "SEARCH_WINDOW_DAYS": "7",
     "SEARCH_OVERLAP_DAYS": "2",
-    "MAX_CATCHUP_DAYS": "365",
+    "MAX_CATCHUP_DAYS": "60",
     "MAX_RESULTS": "1000",
     "REQUEST_TIMEOUT_MS": "15000"
   }
