@@ -57,7 +57,7 @@ export function renderPage(appName: string, nonce: string): string {
 
     <section id="login-view" class="card login-card" aria-labelledby="login-title">
       <h2 id="login-title">登录</h2>
-      <p class="login-lead">请输入管理员口令（Cloudflare Secret: ADMIN_TOKEN）以管理提醒设置。</p>
+      <p class="login-lead">请输入管理员口令以管理提醒设置。</p>
       <form id="login-form">
         <label for="token">管理员口令</label>
         <input id="token" type="password" autocomplete="current-password" maxlength="512" placeholder="输入管理员口令" required />
@@ -80,7 +80,7 @@ export function renderPage(appName: string, nonce: string): string {
           <label for="recipient">收件邮箱</label>
           <input id="recipient" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" />
         </div>
-        <div>
+        <div class="full">
           <span class="label">定时自动检查</span>
           <label class="switch" for="enabled"><input id="enabled" type="checkbox" checked /><span>开启</span></label>
           <div class="hint">开启后，系统每小时自动检查一次 PubMed，发现新文献就自动发邮件到收件邮箱；关闭后不自动检查，只能手动点「立即检查」。</div>
