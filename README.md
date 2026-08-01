@@ -100,7 +100,7 @@ npx --yes wrangler@4.117.0 secret put NCBI_API_KEY
 - `RESEND_API_KEY`：Resend 创建的 API Key
 - `MAIL_FROM`：使用已验证域名的发件人
 - `NCBI_CONTACT_EMAIL`：程序维护者联系邮箱
-- `NCBI_API_KEY`：提高 NCBI API 频率配额时使用；本项目默认每小时检查一次，通常不是必需
+- `NCBI_API_KEY`：NCBI 对未设置 API Key 的请求按来源 IP 限流（每秒 3 次）。Cloudflare Worker 的出站 IP 与其他用户共享，可能被连带限流返回 429；设置 API Key 后改为按密钥限流（每秒 10 次），可避免大多数 429
 
 ## 部署
 
@@ -177,8 +177,8 @@ Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 
 "vars": {
   "SEARCH_WINDOW_DAYS": "7",
   "SEARCH_OVERLAP_DAYS": "2",
-  "MAX_CATCHUP_DAYS": "365",
-  "MAX_RESULTS": "1000",
+  "MAX_CATCHUP_DAYS": "60",
+  "MAX_RESULTS": "2000",
   "REQUEST_TIMEOUT_MS": "15000"
 }
 ```
@@ -202,7 +202,7 @@ Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 
 打开页面先显示**登录界面**，输入管理员口令（`ADMIN_TOKEN`）后点击"登录"（或按回车）进入设置页。口令正确后自动读取状态；口令错误会在登录界面显示提示。
 
 - **保存配置**：保存检索式、邮箱和启用状态；更换检索式会自动清空旧基线
-- **立即检查**：手动执行与 Cron 相同的检查
+- **立即检查**：手动执行一次完整检查并发送新文献邮件；即使「定时自动检查」已关闭也会执行
 - **发送测试邮件**：不查询 PubMed，仅验证发信配置
 - **重建基线**：清空已见 PMID；下一次检查只建立基线
 - **退出登录**：从 `sessionStorage` 和 `localStorage` 清除管理员口令并返回登录界面
@@ -223,6 +223,10 @@ Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 
 
 发现新记录时，程序先保存 `pendingNotification`，再调用 Resend。发送失败后，下次检查优先重试同一批 PMID，并复用同一幂等键。
 
+同一批次**连续 5 次发送失败后自动作废**：该批 PMID 会被标记为已见并停止重试，状态页显示作废记录及原因。作废的批次不会自动补发，请先修复 Resend 配置（API Key、发件域名），需要补发时人工处理。
+
+关闭「定时自动检查」时，若存在待发送批次也会一并作废（标记为已见），避免重新启用后补发过期邮件。
+
 仍存在一个不可完全消除的边界：如果 Resend 已接受邮件、但 Worker 没收到成功响应，并且重试发生在 Resend 幂等窗口之外，可能重复发送。状态页会显示待重试批次，便于人工检查。
 
 ## 常见问题
@@ -242,6 +246,15 @@ npx --yes wrangler@4.117.0 secret put ADMIN_TOKEN
 - `MAIL_FROM` 域名已在 Resend 验证
 - API Key 属于正确的 Resend 账户
 - 发件地址格式正确
+
+### 检查提示 PubMed 请求被限流（HTTP 429）
+
+程序对 429 会尊重 `Retry-After` 并按指数退避自动重试（最多 3 次）。若仍失败，报错会提示：
+
+- 未设置 `NCBI_API_KEY` 时，NCBI 按**来源 IP** 限流（每秒 3 次），而 Cloudflare Worker 的出站 IP 与其他用户共享，容易被连带限流
+- 建议 `wrangler secret put NCBI_API_KEY` 设置密钥（改为按密钥限流、每秒 10 次），并确认已设置 `NCBI_CONTACT_EMAIL`
+
+限流失败不会推进检查状态，下次定时检查会自动重试，不会漏报。
 
 ### 检查提示结果超过 `MAX_RESULTS`
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AlertEngine } from "../.test-dist/src/alert-engine.js";
 import { renderAlertEmail } from "../.test-dist/src/email-template.js";
-import { readJsonObject } from "../.test-dist/src/http.js";
+import { fetchWithRetry, readJsonObject } from "../.test-dist/src/http.js";
 import { NcbiPubMedGateway } from "../.test-dist/src/pubmed.js";
 import { renderPage } from "../.test-dist/src/ui.js";
 import {
@@ -136,6 +136,85 @@ test("发送失败时保留 pending，下一次使用同一幂等键重试", asy
   assert.equal(keys[0], keys[1]);
 });
 
+test("连续 5 次发送失败后自动作废批次并标记已见，不再阻塞检查", async () => {
+  const store = new MemoryStore();
+  store.config = { keyword: "cancer", recipient: "x@y.com", enabled: true, createdAt: "x", updatedAt: "x" };
+  store.state = { version: 2, initialized: true, keyword: "cancer", seenPmids: ["1"], lastSuccessfulCheckAt: "2026-07-30T00:00:00Z" };
+  const pubmed = {
+    async search() { return { pmids: ["2", "1"], totalCount: 2, windowStart: "a", windowEnd: "b", warnings: [] }; },
+    async summaries(pmids) { return pmids.map((pmid) => ({ pmid, title: `T${pmid}`, journal: "J", pubdate: "2026", authors: "A", url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` })); },
+  };
+  const mailer = {
+    sender() { return "Alert <alerts@example.com>"; },
+    async send() { throw new Error("Resend 发信失败：HTTP 401"); },
+  };
+  const engine = new AlertEngine(store, pubmed, mailer, () => new Date("2026-07-31T00:00:00Z"));
+
+  // 前 4 次失败只累计次数并重试
+  for (let i = 0; i < 4; i++) {
+    await assert.rejects(engine.check());
+  }
+  assert.equal(store.state.pendingNotification.failCount, 4);
+
+  // 第 5 次失败：作废
+  const result = await engine.check();
+  assert.equal(result.status, "discarded");
+  assert.equal(store.state.pendingNotification, undefined);
+  assert.equal(store.state.seenPmids.includes("2"), true);
+  assert.equal(store.state.lastDiscarded.count, 1);
+  assert.equal(store.state.lastError, undefined);
+
+  // 作废后下一次检查正常检索，且不再重发已作废批次
+  const after = await engine.check();
+  assert.equal(after.status, "no_new");
+  assert.equal(store.state.lastError, undefined);
+});
+
+test("关闭状态下检查会作废待发送批次；强制手动检查仍执行并发送", async () => {
+  const store = new MemoryStore();
+  store.config = { keyword: "cancer", recipient: "x@y.com", enabled: false, createdAt: "x", updatedAt: "x" };
+  store.state = {
+    version: 2,
+    initialized: true,
+    keyword: "cancer",
+    seenPmids: ["1"],
+    lastSuccessfulCheckAt: "2026-07-30T00:00:00Z",
+    pendingNotification: {
+      idempotencyKey: "k",
+      pmids: ["2"],
+      keyword: "cancer",
+      recipient: "x@y.com",
+      from: "Alert <alerts@example.com>",
+      subject: "new",
+      html: "<p>body</p>",
+      text: "body",
+      emailedCount: 1,
+      createdAt: "2026-07-30T12:00:00Z",
+    },
+  };
+  const pubmed = {
+    async search() { return { pmids: ["3", "2", "1"], totalCount: 3, windowStart: "a", windowEnd: "b", warnings: [] }; },
+    async summaries(pmids) { return pmids.map((pmid) => ({ pmid, title: `T${pmid}`, journal: "J", pubdate: "2026", authors: "A", url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` })); },
+  };
+  let sendCount = 0;
+  const mailer = { sender() { return "Alert <alerts@example.com>"; }, async send() { sendCount += 1; return {}; } };
+  const engine = new AlertEngine(store, pubmed, mailer, () => new Date("2026-07-31T00:00:00Z"));
+
+  // 非强制检查：作废待发送批次，不发送
+  const first = await engine.check();
+  assert.equal(first.status, "disabled");
+  assert.equal(store.state.pendingNotification, undefined);
+  assert.equal(store.state.seenPmids.includes("2"), true);
+  assert.ok(store.state.lastDiscarded);
+  assert.equal(sendCount, 0);
+
+  // 强制手动检查：关闭状态下仍执行完整检查并发送新 PMID
+  const forced = await engine.check(true);
+  assert.equal(forced.status, "emailed");
+  assert.equal(sendCount, 1);
+  assert.equal(store.state.seenPmids.includes("3"), true);
+});
+
 test("延迟重试成功后不把 PubMed 检索进度推进到重试时刻", async () => {
   const store = new MemoryStore();
   store.config = { keyword: "cancer", recipient: "x@y.com", enabled: true, createdAt: "x", updatedAt: "x" };
@@ -229,6 +308,23 @@ test("JSON 接口拒绝错误媒体类型和超大请求", async () => {
     ),
     /请求内容过大/,
   );
+});
+
+test("HTTP 429 会尊重 Retry-After 后重试", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) return new Response("rate limited", { status: 429, headers: { "retry-after": "0" } });
+    return new Response("ok", { status: 200 });
+  };
+  try {
+    const response = await fetchWithRetry("https://example.test", { method: "GET" }, { label: "Test " });
+    assert.equal(response.status, 200);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("管理页动态文本被转义且脚本使用 CSP nonce", () => {

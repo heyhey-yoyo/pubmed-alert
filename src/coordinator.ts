@@ -5,7 +5,7 @@ import { json, readJsonObject } from "./http.js";
 import { ResendMailGateway } from "./mailer.js";
 import { NcbiPubMedGateway } from "./pubmed.js";
 import type { AlertConfig, AlertState, AlertStore, Env } from "./types.js";
-import { escapeHtml, validateConfigInput } from "./utils.js";
+import { escapeHtml, mergePmids, validateConfigInput } from "./utils.js";
 
 const DATA_KEY = "alert:data:v2";
 
@@ -70,7 +70,11 @@ export class AlertCoordinator extends DurableObject<Env> {
       }
 
       if (request.method === "POST" && url.pathname === "/check") {
-        return await this.runExclusive(async () => json({ ok: true, result: await this.engine.check() }));
+        return await this.runExclusive(async () => {
+          // 手动「立即检查」传 force=true，在定时检查关闭时仍执行完整检查并发送。
+          const body = (await readJsonObject(request).catch(() => ({}))) as { force?: unknown };
+          return json({ ok: true, result: await this.engine.check(body.force === true) });
+        });
       }
 
       if (request.method === "POST" && url.pathname === "/rebaseline") {
@@ -127,7 +131,12 @@ export class AlertCoordinator extends DurableObject<Env> {
         lastEmailedCount: 0,
       };
     } else if (recipientChanged && previousState?.pendingNotification) {
-      nextState = { ...previousState, pendingNotification: undefined };
+      // 取消待发送批次时把 PMID 并入已见，避免下一次检查在同一窗口内重新发现并重复发送。
+      nextState = {
+        ...previousState,
+        seenPmids: mergePmids(previousState.pendingNotification.pmids, previousState.seenPmids),
+        pendingNotification: undefined,
+      };
     }
 
     // Config and state share one storage record so the two cannot diverge after a partial write.

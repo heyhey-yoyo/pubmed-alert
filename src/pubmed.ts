@@ -11,7 +11,7 @@ export class NcbiPubMedGateway implements PubMedGateway {
   constructor(private readonly env: Env, private readonly now: () => Date = () => new Date()) {}
 
   async search(keyword: string, lastSuccessfulCheckAt?: string): Promise<PubMedSearchResult> {
-    const maxResults = clampNumber(this.env.MAX_RESULTS, 1_000, 1, 10_000);
+    const maxResults = clampNumber(this.env.MAX_RESULTS, 2_000, 1, 10_000);
     const initialWindowDays = clampNumber(this.env.SEARCH_WINDOW_DAYS, 7, 1, 30);
     const overlapDays = clampNumber(this.env.SEARCH_OVERLAP_DAYS, 2, 0, 7);
     const maxCatchupDays = clampNumber(this.env.MAX_CATCHUP_DAYS, 365, 30, 3_650);
@@ -47,6 +47,14 @@ export class NcbiPubMedGateway implements PubMedGateway {
     );
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new AppError(
+          "PubMed ESearch 请求被限流（HTTP 429）。NCBI 对未设置 NCBI_API_KEY 的请求按来源 IP 限流（每秒 3 次），" +
+            "Cloudflare Worker 的出站 IP 与其他用户共享，可能被连带限流。建议设置 NCBI_API_KEY（按密钥限流、每秒 10 次）" +
+            "并确认已设置 NCBI_CONTACT_EMAIL。本次检查未推进，下次检查会自动重试。",
+          502,
+        );
+      }
       throw new AppError(`PubMed ESearch 请求失败：HTTP ${response.status}`, 502);
     }
 
@@ -71,7 +79,9 @@ export class NcbiPubMedGateway implements PubMedGateway {
     }
     if (totalCount > maxResults) {
       throw new AppError(
-        `本次检索有 ${totalCount} 条记录，超过 MAX_RESULTS=${maxResults}。为避免静默漏报，状态没有推进；请缩小检索式或提高 MAX_RESULTS（最高 10000）。`,
+        `本次检索有 ${totalCount} 条记录，超过 MAX_RESULTS=${maxResults}，检查已暂停、状态未推进（避免截断列表导致静默漏报）。` +
+          `请改用更精确的检索式，例如限定字段或加条件：("term"[Title/Abstract]) AND 期刊/年份限定；` +
+          `确有需要时可在 wrangler.jsonc 中提高 MAX_RESULTS（最高 10000）后重新部署。`,
         409,
       );
     }
@@ -115,7 +125,17 @@ export class NcbiPubMedGateway implements PubMedGateway {
         },
         { label: "PubMed ESummary ", timeoutMs },
       );
-      if (!response.ok) throw new AppError(`PubMed ESummary 请求失败：HTTP ${response.status}`, 502);
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new AppError(
+            "PubMed ESummary 请求被限流（HTTP 429）。NCBI 对未设置 NCBI_API_KEY 的请求按来源 IP 限流（每秒 3 次），" +
+              "Cloudflare Worker 的出站 IP 与其他用户共享，可能被连带限流。建议设置 NCBI_API_KEY（按密钥限流、每秒 10 次）" +
+              "并确认已设置 NCBI_CONTACT_EMAIL。本次检查未推进，下次检查会自动重试。",
+            502,
+          );
+        }
+        throw new AppError(`PubMed ESummary 请求失败：HTTP ${response.status}`, 502);
+      }
 
       const data = (await response.json()) as { result?: Record<string, unknown> & { uids?: unknown } };
       const result = data.result;

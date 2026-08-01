@@ -79,8 +79,9 @@ export default {
         }
       })().catch((error) => {
         controller.noRetry();
+        // 不重新抛出：Cloudflare 对 cron 异常的日志只会显示触发它的 cron 表达式（如 "0 * * * * "），
+        // 没有诊断价值；真实原因由上面的结构化日志和 DO 状态中的 lastError（状态页「上次错误」）记录。
         console.error(JSON.stringify({ event: "scheduled_pubmed_check_failed", error: errorMessage(error) }));
-        throw error;
       }),
     );
   },

@@ -32,6 +32,8 @@ export interface PendingNotification {
   text: string;
   emailedCount: number;
   createdAt: string;
+  /** 已连续发送失败的次数；达到阈值后该批次自动作废。旧数据可能没有此字段，读取时按 0 处理。 */
+  failCount?: number;
 }
 
 export interface AlertState {
@@ -51,6 +53,8 @@ export interface AlertState {
   lastError?: string;
   lastErrorAt?: string;
   pendingNotification?: PendingNotification;
+  /** 连续发送失败后被自动作废的批次信息。 */
+  lastDiscarded?: { at: string; count: number; reason: string };
 }
 
 export interface PubMedArticle {
@@ -71,7 +75,7 @@ export interface PubMedSearchResult {
 }
 
 export interface CheckResult {
-  status: "disabled" | "initialized" | "no_new" | "emailed";
+  status: "disabled" | "initialized" | "no_new" | "emailed" | "discarded";
   message: string;
   resultCount?: number;
   newCount?: number;

@@ -60,7 +60,6 @@ export function validateConfigInput(body: Record<string, unknown>): {
 }
 
 export function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length > 512 || b.length > 512) return false;
   const maxLength = Math.max(a.length, b.length);
   let mismatch = a.length ^ b.length;
   for (let index = 0; index < maxLength; index += 1) {

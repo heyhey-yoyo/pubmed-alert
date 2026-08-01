@@ -11,6 +11,8 @@ import type {
 import { findNewPmids, mergePmids, sha256Hex, truncate } from "./utils.js";
 
 const DIGEST_LIMIT = 30;
+/** 同一批待发送邮件连续失败多少次后自动作废，避免永久阻塞后续检查。 */
+const MAX_SEND_ATTEMPTS = 5;
 
 export class AlertEngine {
   private activeCheck: Promise<CheckResult> | null = null;
@@ -22,22 +24,43 @@ export class AlertEngine {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  check(): Promise<CheckResult> {
+  check(force = false): Promise<CheckResult> {
     if (this.activeCheck) return this.activeCheck;
-    const task = this.performCheck().finally(() => {
+    const task = this.performCheck(force).finally(() => {
       if (this.activeCheck === task) this.activeCheck = null;
     });
     this.activeCheck = task;
     return task;
   }
 
-  private async performCheck(): Promise<CheckResult> {
+  private async performCheck(force: boolean): Promise<CheckResult> {
     const config = await this.store.getConfig();
-    if (!config || !config.enabled) return { status: "disabled", message: "提醒尚未启用。" };
-
     let state =
       (await this.store.getState()) ??
-      ({ version: 2, initialized: false, keyword: config.keyword, seenPmids: [] } satisfies AlertState);
+      ({ version: 2, initialized: false, keyword: config?.keyword ?? "", seenPmids: [] } satisfies AlertState);
+
+    if (!config || (!config.enabled && !force)) {
+      // 定时检查关闭（且非手动强制）时，若存在待发送批次，直接作废并标记已见，
+      // 避免重新启用后补发过期邮件；不推进 lastSuccessfulCheckAt，检索窗口只会更宽。
+      if (state.pendingNotification) {
+        const pending = state.pendingNotification;
+        const now = this.now().toISOString();
+        await this.store.putState({
+          ...state,
+          seenPmids: mergePmids(pending.pmids, state.seenPmids),
+          lastAttemptAt: now,
+          pendingNotification: undefined,
+          lastDiscarded: {
+            at: now,
+            count: pending.pmids.length,
+            reason: "提醒已关闭，待发送批次自动作废。",
+          },
+        });
+        return { status: "disabled", message: "提醒尚未启用；存在待发送批次，已自动作废。" };
+      }
+      return { status: "disabled", message: "提醒尚未启用。" };
+    }
+
     const attemptedAt = this.now().toISOString();
 
     try {
@@ -122,6 +145,7 @@ export class AlertEngine {
         text: email.text,
         emailedCount: articles.length,
         createdAt: successAt,
+        failCount: 0,
       };
       state = {
         ...state,
@@ -155,7 +179,8 @@ export class AlertEngine {
     const pending = state.pendingNotification;
     if (!pending) throw new AppError("待发送状态异常。", 500, false);
     if (!config || config.keyword !== pending.keyword || config.recipient !== pending.recipient || !config.enabled) {
-      const cleared = { ...state, pendingNotification: undefined };
+      // 作废时把批次 PMID 并入已见，避免下一次检查在同一窗口内重新发现并重复发送。
+      const cleared = { ...state, seenPmids: mergePmids(pending.pmids, state.seenPmids), pendingNotification: undefined };
       await this.store.putState(cleared);
       throw new AppError("配置已变化，旧的待发送邮件已取消；请重新检查。", 409);
     }
@@ -169,14 +194,48 @@ export class AlertEngine {
       throw new AppError("待发送邮件内容不完整，请取消待发送状态并重新检查。", 409);
     }
 
-    await this.mailer.send({
-      from: pending.from,
-      to: pending.recipient,
-      subject: pending.subject,
-      html: pending.html,
-      text: pending.text,
-      idempotencyKey: pending.idempotencyKey,
-    });
+    try {
+      await this.mailer.send({
+        from: pending.from,
+        to: pending.recipient,
+        subject: pending.subject,
+        html: pending.html,
+        text: pending.text,
+        idempotencyKey: pending.idempotencyKey,
+      });
+    } catch (error) {
+      const failCount = (pending.failCount ?? 0) + 1;
+      if (failCount < MAX_SEND_ATTEMPTS) {
+        // 未达到作废阈值：记录失败次数，等待下次检查重试（保留 pending 与幂等键）。
+        await this.store.putState({ ...state, pendingNotification: { ...pending, failCount } });
+        throw error;
+      }
+      // 连续 MAX_SEND_ATTEMPTS 次失败：作废该批次并标记为已见，避免无限重试阻塞后续检查；
+      // 不推进 lastSuccessfulCheckAt，下一次检查的检索窗口只会更宽，不会产生空洞。
+      const now = this.now().toISOString();
+      await this.store.putState({
+        ...state,
+        initialized: true,
+        keyword: pending.keyword,
+        seenPmids: mergePmids(pending.pmids, state.seenPmids),
+        lastAttemptAt: now,
+        lastNewCount: pending.pmids.length,
+        lastEmailedCount: 0,
+        lastError: undefined,
+        lastErrorAt: undefined,
+        pendingNotification: undefined,
+        lastDiscarded: {
+          at: now,
+          count: pending.pmids.length,
+          reason: `连续 ${MAX_SEND_ATTEMPTS} 次发送失败：${truncate(errorMessage(error), 200)}`,
+        },
+      });
+      return {
+        status: "discarded",
+        message: `提醒邮件连续 ${MAX_SEND_ATTEMPTS} 次发送失败，该批次（${pending.pmids.length} 篇）已自动作废并标记为已见，不再重试。请检查 Resend 配置（API Key、发件域名）后重新检查；该批次不会补发。`,
+        newCount: pending.pmids.length,
+      };
+    }
 
     const now = this.now().toISOString();
     const finalState: AlertState = {

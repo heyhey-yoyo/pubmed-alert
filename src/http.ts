@@ -71,7 +71,13 @@ export async function fetchWithRetry(
 
       const retryAfter = parseRetryAfter(response.headers.get("retry-after"));
       await response.body?.cancel().catch(() => undefined);
-      await sleep(retryAfter ?? Math.min(4_000, 250 * 2 ** (attempt - 1)));
+      if (response.status === 429) {
+        // 限流重试要更耐心：优先尊重 Retry-After；无该头部时按 1s、2s、4s 指数退避，
+        // 避免在限流窗口内（如 NCBI 无 API Key 时按 IP 每秒 3 次）连环触发。
+        await sleep(retryAfter ?? Math.min(8_000, 1_000 * 2 ** (attempt - 1)));
+      } else {
+        await sleep(retryAfter ?? Math.min(4_000, 250 * 2 ** (attempt - 1)));
+      }
     } catch (error) {
       lastError = error;
       if (attempt === attempts) break;
@@ -88,8 +94,8 @@ export async function fetchWithRetry(
 function parseRetryAfter(value: string | null): number | undefined {
   if (!value) return undefined;
   const seconds = Number.parseInt(value, 10);
-  if (Number.isFinite(seconds)) return Math.min(5_000, Math.max(0, seconds * 1_000));
+  if (Number.isFinite(seconds)) return Math.min(10_000, Math.max(0, seconds * 1_000));
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return undefined;
-  return Math.min(5_000, Math.max(0, timestamp - Date.now()));
+  return Math.min(10_000, Math.max(0, timestamp - Date.now()));
 }

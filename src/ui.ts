@@ -60,7 +60,7 @@ export function renderPage(appName: string, nonce: string): string {
       <p class="login-lead">请输入管理员口令以管理提醒设置。</p>
       <form id="login-form">
         <label for="token">管理员口令</label>
-        <input id="token" type="password" autocomplete="current-password" maxlength="512" placeholder="输入管理员口令" required />
+        <input id="token" type="password" autocomplete="current-password" placeholder="输入管理员口令" required />
         <label class="remember"><input id="remember" type="checkbox" /> 在此设备长期记住口令（共享设备不建议）</label>
         <div class="hint">默认仅保存在当前浏览器会话。管理员口令不会显示在状态中。</div>
         <button class="primary" id="login-btn" type="submit">登录</button>
@@ -155,7 +155,7 @@ export function renderPage(appName: string, nonce: string): string {
     if (!token) throw new Error("请先输入管理员口令。");
     persistToken();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
     try {
       const headers = new Headers(options.headers || {});
       headers.set("authorization", "Bearer " + token);
@@ -202,7 +202,10 @@ export function renderPage(appName: string, nonce: string): string {
     addMeta("上次成功检查", formatDate(state.lastSuccessfulCheckAt));
     addMeta("上次发现新记录", Number.isFinite(state.lastNewCount) ? state.lastNewCount : "—");
     addMeta("上次邮件", formatDate(state.lastEmailAt));
-    addMeta("待发送重试", state.pendingNotification ? state.pendingNotification.pmids.length + " 篇" : "无");
+    addMeta("待发送重试", state.pendingNotification ? state.pendingNotification.pmids.length + " 篇" + (state.pendingNotification.failCount ? "（已失败 " + state.pendingNotification.failCount + " 次）" : "") : "无");
+    if (state.lastDiscarded) {
+      addMeta("最近作废批次", state.lastDiscarded.count + " 篇（" + formatDate(state.lastDiscarded.at) + "）：" + state.lastDiscarded.reason);
+    }
     addMeta("Resend 配置", ready.resendApiKey && ready.mailFrom ? "完成" : "缺少 Secret");
     addMeta("NCBI 联系邮箱", ready.ncbiContactEmail ? "已设置" : "建议设置");
     const warningLine = Array.isArray(state.lastWarnings) && state.lastWarnings.length ? "\\nPubMed 提示：" + state.lastWarnings.join("；") : "";
@@ -250,7 +253,7 @@ export function renderPage(appName: string, nonce: string): string {
   }));
 
   $("check").addEventListener("click", () => run(async () => {
-    const data = await api("/api/check", { method: "POST", body: "{}" });
+    const data = await api("/api/check", { method: "POST", body: JSON.stringify({ force: true }) });
     show(data.result.message + (data.result.resultCount !== undefined ? "\\n检索窗口内结果：" + data.result.resultCount : ""));
     renderStatus(await api("/api/status"));
   }));
