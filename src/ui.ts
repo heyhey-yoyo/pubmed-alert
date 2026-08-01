@@ -88,7 +88,6 @@ export function renderPage(appName: string, nonce: string): string {
       </div>
       <div class="actions">
         <button class="primary" id="save" type="button">保存配置</button>
-        <button id="load" type="button">读取状态</button>
         <button id="check" type="button">立即检查</button>
         <button id="test" type="button">发送测试邮件</button>
         <button class="danger" id="rebaseline" type="button">重建基线</button>
@@ -240,8 +239,6 @@ export function renderPage(appName: string, nonce: string): string {
     event.preventDefault();
     attemptLogin();
   });
-
-  $("load").addEventListener("click", () => run(async () => renderStatus(await api("/api/status"))));
 
   $("save").addEventListener("click", () => run(async () => {
     const data = await api("/api/config", {
