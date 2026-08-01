@@ -1,16 +1,12 @@
-import { escapeHtml } from "./utils.js";
-
-export function renderPage(appName: string, nonce: string): string {
-  const safeName = escapeHtml(appName);
-  return `<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="自托管的 PubMed 关键词邮件提醒管理页" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <title>${safeName}</title>
-  <style nonce="${nonce}">
+  <title>PubMed 关键词提醒</title>
+  <style nonce="testnonce123">
     :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #f4f7fb; color: #172033; }
@@ -52,7 +48,7 @@ export function renderPage(appName: string, nonce: string): string {
 <body>
   <main class="wrap">
     <div class="eyebrow">Cloudflare Worker · PubMed</div>
-    <h1>${safeName}</h1>
+    <h1>PubMed 关键词提醒</h1>
     <p class="lead">设置一个 PubMed 检索式和收件邮箱。系统每小时检查一次，只有出现未见过的 PMID 才发送邮件。</p>
 
     <section id="login-view" class="card login-card" aria-labelledby="login-title">
@@ -99,7 +95,7 @@ export function renderPage(appName: string, nonce: string): string {
 
     <footer>本工具通过 NCBI E-utilities 查询 PubMed，仅发送题录摘要信息。请遵守 <a href="https://www.ncbi.nlm.nih.gov/home/about/policies/" target="_blank" rel="noopener noreferrer">NCBI policies and disclaimers</a>，并以 PubMed 原始页面为准。</footer>
   </main>
-<script nonce="${nonce}">
+<script nonce="testnonce123">
   const $ = (id) => document.getElementById(id);
   const tokenInput = $("token");
   const rememberInput = $("remember");
@@ -205,8 +201,10 @@ export function renderPage(appName: string, nonce: string): string {
     addMeta("待发送重试", state.pendingNotification ? state.pendingNotification.pmids.length + " 篇" : "无");
     addMeta("Resend 配置", ready.resendApiKey && ready.mailFrom ? "完成" : "缺少 Secret");
     addMeta("NCBI 联系邮箱", ready.ncbiContactEmail ? "已设置" : "建议设置");
-    const warningLine = Array.isArray(state.lastWarnings) && state.lastWarnings.length ? "\\nPubMed 提示：" + state.lastWarnings.join("；") : "";
-    const errorLine = state.lastError ? "\\n上次错误：" + state.lastError : "";
+    const warningLine = Array.isArray(state.lastWarnings) && state.lastWarnings.length ? "
+PubMed 提示：" + state.lastWarnings.join("；") : "";
+    const errorLine = state.lastError ? "
+上次错误：" + state.lastError : "";
     show("状态读取成功。" + warningLine + errorLine, Boolean(state.lastError));
   }
 
@@ -253,7 +251,8 @@ export function renderPage(appName: string, nonce: string): string {
 
   $("check").addEventListener("click", () => run(async () => {
     const data = await api("/api/check", { method: "POST", body: "{}" });
-    show(data.result.message + (data.result.resultCount !== undefined ? "\\n检索窗口内结果：" + data.result.resultCount : ""));
+    show(data.result.message + (data.result.resultCount !== undefined ? "
+检索窗口内结果：" + data.result.resultCount : ""));
     renderStatus(await api("/api/status"));
   }));
 
@@ -283,5 +282,4 @@ export function renderPage(appName: string, nonce: string): string {
   }
 </script>
 </body>
-</html>`;
-}
+</html>

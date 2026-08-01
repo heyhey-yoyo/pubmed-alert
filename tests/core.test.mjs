@@ -236,6 +236,13 @@ test("管理页动态文本被转义且脚本使用 CSP nonce", () => {
   assert.equal(html.includes("innerHTML"), false);
 });
 
+test("管理页内联脚本必须能通过语法解析", () => {
+  const html = renderPage("PubMed 关键词提醒", "nonce123");
+  const m = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/);
+  assert.ok(m, "页面应包含内联脚本");
+  assert.doesNotThrow(() => new Function(m[1]), "模板里的转义序列不得破坏内联脚本的语法");
+});
+
 
 test("幂等键绑定完整邮件负载，收件人变化会生成不同键", async () => {
   const keys = [];
