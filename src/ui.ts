@@ -37,6 +37,7 @@ export function renderPage(appName: string, nonce: string): string {
     button:disabled { opacity: .55; cursor: wait; transform: none; }
     #status, #login-status { margin-top: 18px; padding: 14px; border-radius: 10px; background: #f7f9fc; border: 1px solid #e2e8f0; min-height: 48px; color: #42516a; white-space: pre-wrap; line-height: 1.55; }
     #status.error, #login-status.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+    #login-status:empty { display: none; }
     .meta { margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 18px; color: #64748b; font-size: 13px; }
     .meta div { overflow-wrap: anywhere; }
     .login-card { max-width: 460px; margin: 0 auto; }
