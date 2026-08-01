@@ -81,7 +81,7 @@ export function renderPage(appName: string, nonce: string): string {
         <button class="danger" id="rebaseline" type="button">重建基线</button>
         <button id="clear-token" type="button">清除口令</button>
       </div>
-      <div id="status" role="status" aria-live="polite">未设置 ADMIN_TOKEN 时无需口令，可直接读取状态或保存配置；设置后需输入口令。</div>
+      <div id="status" role="status" aria-live="polite">请输入管理员口令，然后读取状态或保存配置。</div>
       <div class="meta" id="meta" aria-label="运行状态"></div>
     </section>
 
@@ -119,12 +119,13 @@ export function renderPage(appName: string, nonce: string): string {
 
   async function api(path, options = {}) {
     const token = tokenInput.value.trim();
-    if (token) persistToken();
+    if (!token) throw new Error("请先输入管理员口令。");
+    persistToken();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const headers = new Headers(options.headers || {});
-      if (token) headers.set("authorization", "Bearer " + token);
+      headers.set("authorization", "Bearer " + token);
       if (options.body !== undefined) headers.set("content-type", "application/json");
       const response = await fetch(path, { ...options, headers, signal: controller.signal, credentials: "same-origin" });
       const contentType = response.headers.get("content-type") || "";

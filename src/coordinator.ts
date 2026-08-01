@@ -94,7 +94,7 @@ export class AlertCoordinator extends DurableObject<Env> {
       config,
       state,
       readiness: {
-        adminToken: Boolean(this.env.ADMIN_TOKEN && this.env.ADMIN_TOKEN.length >= 24),
+        adminToken: Boolean(this.env.ADMIN_TOKEN),
         resendApiKey: Boolean(this.env.RESEND_API_KEY),
         mailFrom: Boolean(this.env.MAIL_FROM),
         ncbiContactEmail: Boolean(this.env.NCBI_CONTACT_EMAIL),

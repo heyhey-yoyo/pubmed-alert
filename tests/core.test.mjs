@@ -36,14 +36,15 @@ test("配置校验拒绝无效输入", () => {
   });
 });
 
-test("未配置有效口令时开放访问，配置后要求匹配", () => {
+test("未设置口令时禁止访问，设置后要求完全匹配（无长度限制）", () => {
   const token = "a".repeat(32);
   assert.equal(constantTimeEqual(token, token), true);
   assert.equal(constantTimeEqual(token, token + "x"), false);
+  assert.equal(isAuthorized(null, undefined), false); // 未设置 → 禁止访问
   assert.equal(isAuthorized(`Bearer ${token}`, token), true);
   assert.equal(isAuthorized(`Bearer ${"x".repeat(513)}`, token), false);
-  assert.equal(isAuthorized(null, undefined), true); // 未设置口令 → 开放
-  assert.equal(isAuthorized(`Bearer short`, "short"), true); // 口令过短视为未配置 → 开放
+  assert.equal(isAuthorized(`Bearer short`, "short"), true); // 短口令同样有效
+  assert.equal(isAuthorized(`Bearer wrong`, "short"), false); // 不匹配仍拒绝
 });
 
 test("搜索窗口按上次成功时间回退重叠天数", () => {

@@ -35,7 +35,7 @@ export default {
         return json({ ok: false, error: "请求方法不支持。" }, 405, { allow: [...allowedMethods].join(", ") });
       }
       if (!isAuthorized(request.headers.get("authorization"), env.ADMIN_TOKEN)) {
-        return json({ ok: false, error: "管理员口令不正确，或 ADMIN_TOKEN 长度不足 24 位。" }, 401, {
+        return json({ ok: false, error: "管理员口令不正确。" }, 401, {
           "www-authenticate": 'Bearer realm="PubMed Alert"',
         });
       }

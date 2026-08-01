@@ -70,8 +70,8 @@ export function constantTimeEqual(a: string, b: string): boolean {
 }
 
 export function isAuthorized(authorization: string | null, expectedToken: string | undefined): boolean {
-  // 未配置有效口令（未设置或不足 24 位）时开放访问，不再要求登录。
-  if (!expectedToken || expectedToken.length < 24) return true;
+  // 未设置 ADMIN_TOKEN 时禁止访问；设置了则必须完全匹配（无长度限制）。
+  if (!expectedToken) return false;
   const supplied = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
   return constantTimeEqual(supplied, expectedToken);
 }
