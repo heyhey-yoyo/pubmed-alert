@@ -51,7 +51,6 @@ export function renderPage(appName: string, nonce: string): string {
 </head>
 <body>
   <main class="wrap">
-    <div class="eyebrow">Cloudflare Worker · PubMed</div>
     <h1>${safeName}</h1>
     <p class="lead">设置一个 PubMed 检索式和收件邮箱。系统每小时检查一次，只有出现未见过的 PMID 才发送邮件。</p>
 
@@ -81,8 +80,9 @@ export function renderPage(appName: string, nonce: string): string {
           <input id="recipient" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" />
         </div>
         <div>
-          <span class="label">提醒状态</span>
-          <label class="switch" for="enabled"><input id="enabled" type="checkbox" checked /><span>启用定时提醒</span></label>
+          <span class="label">定时自动检查</span>
+          <label class="switch" for="enabled"><input id="enabled" type="checkbox" checked /><span>开启</span></label>
+          <div class="hint">开启后，系统每小时自动检查一次 PubMed，发现新文献就自动发邮件到收件邮箱；关闭后不自动检查，只能手动点「立即检查」。</div>
         </div>
       </div>
       <div class="actions">
@@ -275,9 +275,12 @@ export function renderPage(appName: string, nonce: string): string {
 
   rememberInput.addEventListener("change", persistToken);
   if (tokenInput.value) {
+    // 已存有口令：先直接显示设置页，避免每次刷新都先闪登录界面；登录验证在后台进行。
+    show("正在读取状态…");
+    showMain();
     api("/api/status")
       .then((data) => { renderStatus(data); showMain(); })
-      .catch((error) => loginMessage((error && error.message) || "自动登录失败，请重新输入口令。", true));
+      .catch((error) => showLogin((error && error.message) || "自动登录失败，请重新输入口令。", true));
   } else {
     tokenInput.focus();
   }
