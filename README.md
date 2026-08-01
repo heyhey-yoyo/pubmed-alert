@@ -9,7 +9,7 @@
 - 检索结果超过上限时明确暂停，避免 `retmax` 截断导致静默漏报
 - 邮件发送前持久化待发送状态，并使用 Resend 幂等键降低重复邮件概率
 - 单例 Durable Object 串行协调配置、手动检查与 Cron 检查
-- 管理 API 使用至少 24 位的 `ADMIN_TOKEN` Bearer Token 保护
+- 管理 API 由 `ADMIN_TOKEN` Bearer Token 保护；未配置有效口令（未设置或不足 24 位）时开放访问
 - 默认仅在 `sessionStorage` 保存管理员口令；可由用户选择长期记住
 - CSP、安全响应头、请求体大小限制、外部请求超时和有限重试
 - TypeScript 严格检查和核心逻辑回归测试
@@ -91,12 +91,13 @@ npx --yes wrangler@4.117.0 secret put NCBI_CONTACT_EMAIL
 可选：
 
 ```bash
+npx --yes wrangler@4.117.0 secret put ADMIN_TOKEN
 npx --yes wrangler@4.117.0 secret put NCBI_API_KEY
 ```
 
 建议：
 
-- `ADMIN_TOKEN`：至少 24 位，推荐 32 字节以上随机值，例如 `openssl rand -base64 32`
+- `ADMIN_TOKEN`：可选。未设置（或不足 24 位）时所有管理 API 开放访问、无需口令；设置至少 24 位后恢复口令保护，例如 `openssl rand -base64 32`
 - `RESEND_API_KEY`：Resend 创建的 API Key
 - `MAIL_FROM`：使用已验证域名的发件人
 - `NCBI_CONTACT_EMAIL`：程序维护者联系邮箱
@@ -114,7 +115,7 @@ npm run deploy
 部署后：
 
 1. 打开 Wrangler 输出的 `workers.dev` 地址
-2. 输入 `ADMIN_TOKEN`
+2. 未设置 `ADMIN_TOKEN` 时无需登录；设置了则需要输入该口令
 3. 保存 PubMed 检索式、收件邮箱和启用状态
 4. 点击“立即检查”建立基线
 5. 点击“发送测试邮件”验证 Resend
@@ -208,8 +209,8 @@ Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 
 
 ## 安全说明
 
-- 管理页面地址可以公开访问，但 `/api/*` 必须通过 Bearer Token 鉴权
-- `ADMIN_TOKEN` 少于 24 位时所有管理 API 都拒绝访问
+- 管理页面地址可以公开访问，`/api/*` 在未设置有效 `ADMIN_TOKEN`（未设置或不足 24 位）时开放访问
+- 设置 `ADMIN_TOKEN`（至少 24 位）后 `/api/*` 必须通过 Bearer Token 鉴权
 - 默认只在当前浏览器会话保存 Token；“长期记住”会写入 `localStorage`
 - 页面使用严格 CSP nonce，不使用动态 `innerHTML` 渲染服务端状态
 - API 响应不缓存，并设置 `nosniff`、`no-referrer`、`noindex`
@@ -226,9 +227,9 @@ Cloudflare Token 只授予部署该 Worker 所需的最小权限。运行时的 
 
 ## 常见问题
 
-### 显示 `ADMIN_TOKEN` 长度不足
+### 需要启用口令保护
 
-重新设置一个至少 24 位的随机值：
+未设置 `ADMIN_TOKEN` 时管理 API 开放访问。如需保护，设置一个至少 24 位的随机值：
 
 ```bash
 npx --yes wrangler@4.117.0 secret put ADMIN_TOKEN

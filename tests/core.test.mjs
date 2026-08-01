@@ -36,13 +36,14 @@ test("配置校验拒绝无效输入", () => {
   });
 });
 
-test("鉴权比较支持正确 token 并限制超长输入", () => {
+test("未配置有效口令时开放访问，配置后要求匹配", () => {
   const token = "a".repeat(32);
   assert.equal(constantTimeEqual(token, token), true);
   assert.equal(constantTimeEqual(token, token + "x"), false);
   assert.equal(isAuthorized(`Bearer ${token}`, token), true);
   assert.equal(isAuthorized(`Bearer ${"x".repeat(513)}`, token), false);
-  assert.equal(isAuthorized(`Bearer short`, "short"), false);
+  assert.equal(isAuthorized(null, undefined), true); // 未设置口令 → 开放
+  assert.equal(isAuthorized(`Bearer short`, "short"), true); // 口令过短视为未配置 → 开放
 });
 
 test("搜索窗口按上次成功时间回退重叠天数", () => {
