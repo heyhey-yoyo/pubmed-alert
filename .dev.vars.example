@@ -1,0 +1,6 @@
+ADMIN_TOKEN="replace-with-at-least-32-random-characters"
+RESEND_API_KEY="re_xxxxxxxxx"
+MAIL_FROM="PubMed Alert <alerts@example.com>"
+NCBI_CONTACT_EMAIL="developer@example.com"
+# Optional: raises the normal NCBI E-utilities request limit when supplied.
+NCBI_API_KEY=""
