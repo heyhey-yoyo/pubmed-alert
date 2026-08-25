@@ -350,3 +350,8 @@ MIT
 > **⚠️ 任何修改此项目的 AI 代理（Claude Code、Cursor、Copilot 等）都必须同步更新本文件与 [AGENTS.md](./AGENTS.md)。**
 >
 > - 修改存储架构（Durable Object / SQLite）或检索语义前先读 [AGENTS.md](./AGENTS.md) 的相关章节
+
+
+## 项目标志
+
+页面标志与浏览器标题栏图标共用 `project-mark.svg`：深灰方章、米白线条与赤陶色识别点形成统一系列，同时保留本项目的专属主题符号。替换标志时不得改变现有标志容器尺寸或页面布局。

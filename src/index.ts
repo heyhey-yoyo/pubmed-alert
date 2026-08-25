@@ -14,6 +14,8 @@ const ALLOWED_API_ROUTES = new Map<string, Set<string>>([
   ["/api/rebaseline", new Set(["POST"])],
 ]);
 
+const PROJECT_MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="PubMed Alert"><rect width="48" height="48" rx="4" fill="#24221f"/><path d="M13 12h18l5 5v19H13z" fill="none" stroke="#f3eee5" stroke-width="2"/><path d="M31 12v6h6M18 23h13M18 28h9" fill="none" stroke="#f3eee5" stroke-width="2" stroke-linecap="round"/><path d="M31 32c0-2.8 1.9-5 4.2-5s4.2 2.2 4.2 5v3l1.6 2H29.4l1.6-2z" fill="#c15f3c"/><circle cx="35.2" cy="39" r="1.8" fill="#c15f3c"/></svg>`;
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -22,6 +24,16 @@ export default {
       const nonce = crypto.randomUUID().replaceAll("-", "");
       const headers = pageHeaders(nonce);
       return new Response(renderPage(env.APP_NAME ?? "PubMed 关键词提醒", nonce), { headers });
+    }
+
+    if (request.method === "GET" && url.pathname === "/project-mark.svg") {
+      return new Response(PROJECT_MARK, {
+        headers: {
+          "content-type": "image/svg+xml; charset=utf-8",
+          "cache-control": "public, max-age=31536000, immutable",
+          "x-content-type-options": "nosniff",
+        },
+      });
     }
 
     if (request.method === "GET" && url.pathname === "/health") {
@@ -100,7 +112,7 @@ function pageHeaders(nonce: string): Headers {
       "form-action 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
-      "img-src 'none'",
+      "img-src 'self'",
     ].join("; "),
     "cross-origin-opener-policy": "same-origin",
     "cross-origin-resource-policy": "same-origin",

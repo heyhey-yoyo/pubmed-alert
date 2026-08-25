@@ -10,6 +10,7 @@ export function renderPage(appName: string, nonce: string): string {
   <meta name="description" content="自托管的 PubMed 关键词邮件提醒管理页" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <title>${safeName}</title>
+  <link rel="icon" href="/project-mark.svg" type="image/svg+xml" />
   <style nonce="${nonce}">
     :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     * { box-sizing: border-box; }
@@ -17,6 +18,8 @@ export function renderPage(appName: string, nonce: string): string {
     .wrap { max-width: 820px; margin: 0 auto; padding: 48px 20px 64px; }
     .eyebrow { color: #2463eb; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
+    .page-title { display: flex; align-items: center; gap: 14px; }
+    .page-title img { width: 44px; height: 44px; flex: 0 0 44px; }
     .lead { margin: 0 0 28px; max-width: 680px; color: #59657a; font-size: 17px; line-height: 1.7; }
     .card { background: #fff; border: 1px solid #dfe6f1; border-radius: 18px; padding: 24px; box-shadow: 0 18px 55px rgba(34,55,94,.08); }
     [hidden] { display: none !important; }
@@ -66,7 +69,7 @@ export function renderPage(appName: string, nonce: string): string {
 </head>
 <body>
   <main class="wrap">
-    <h1>${safeName}</h1>
+    <div class="page-title"><img src="/project-mark.svg" alt="" aria-hidden="true" /><h1>${safeName}</h1></div>
     <p class="lead">设置一个 PubMed 检索式和收件邮箱。系统每小时检查一次，只有出现未见过的 PMID 才发送邮件。</p>
 
     <section id="login-view" class="card login-card" aria-labelledby="login-title">
