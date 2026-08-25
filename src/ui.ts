@@ -26,9 +26,9 @@ export function renderPage(appName: string, nonce: string): string {
     input[type="text"], input[type="email"], input[type="password"] { width: 100%; border: 1px solid #cfd8e6; border-radius: 10px; padding: 12px 13px; font: inherit; outline: none; }
     input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid rgba(36,99,235,.35); outline-offset: 2px; }
     input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus { border-color: #2463eb; box-shadow: 0 0 0 3px rgba(36,99,235,.12); }
-    .hint { margin-top: 7px; color: #6b778c; font-size: 12px; line-height: 1.5; }
+    .hint { margin-top: 7px; color: #5f5a53; font-size: 13px; line-height: 1.5; }
     .switch { display: flex; align-items: center; gap: 10px; min-height: 44px; }
-    .remember { margin-top: 9px; display: flex; align-items: center; gap: 8px; color: #59657a; font-size: 12px; }
+    .remember { margin-top: 9px; display: flex; align-items: center; gap: 8px; color: #5f5a53; font-size: 13px; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
     button { border: 0; border-radius: 10px; padding: 11px 16px; font: inherit; font-weight: 800; cursor: pointer; background: #e8eef8; color: #25324a; }
     button.primary { background: #2463eb; color: white; }
@@ -44,7 +44,7 @@ export function renderPage(appName: string, nonce: string): string {
     .login-card h2 { margin: 0 0 6px; font-size: 20px; }
     .login-lead { margin: 0 0 18px; color: #59657a; font-size: 14px; line-height: 1.6; }
     .login-card form button { width: 100%; margin-top: 18px; padding: 13px 16px; font-size: 15px; }
-    footer { margin-top: 22px; color: #6b778c; font-size: 12px; line-height: 1.6; }
+    footer { margin-top: 22px; color: #5f5a53; font-size: 13px; line-height: 1.6; }
     footer a { color: inherit; }
     @media (max-width: 650px) { .grid, .meta { grid-template-columns: 1fr; } .full { grid-column: auto; } .card { padding: 19px; } }
     @media (prefers-reduced-motion: reduce) { button { transform: none !important; } }
