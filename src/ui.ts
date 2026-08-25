@@ -48,6 +48,20 @@ export function renderPage(appName: string, nonce: string): string {
     footer a { color: inherit; }
     @media (max-width: 650px) { .grid, .meta { grid-template-columns: 1fr; } .full { grid-column: auto; } .card { padding: 19px; } }
     @media (prefers-reduced-motion: reduce) { button { transform: none !important; } }
+    /* Portfolio visual system for the settings page. */
+    body { background: radial-gradient(circle at 84% -10%, rgba(193,95,60,.1), transparent 30%), #f3eee5; color: #24221f; }
+    h1, h2 { font-family: Georgia, "Times New Roman", "Songti SC", serif; font-weight: 400; }
+    .card { background: rgba(255,252,247,.84); border-color: rgba(36,34,31,.18); border-radius: 0; box-shadow: none; }
+    .eyebrow { color: #c15f3c; }
+    .lead, .login-lead { color: #6f6a62; }
+    input[type="text"], input[type="email"], input[type="password"] { background: rgba(255,255,255,.46); border-color: rgba(36,34,31,.3); border-radius: 0; color: #24221f; }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus { border-color: #c15f3c; box-shadow: 0 0 0 3px rgba(193,95,60,.14); }
+    button { border-radius: 0; box-shadow: none; }
+    button.primary { background: #c15f3c; color: #fffaf5; }
+    button.danger { background: #f6dfdd; color: #8f332f; }
+    #status, #login-status { background: #ebe4d8; border-color: rgba(36,34,31,.18); color: #4f4b45; border-radius: 0; }
+    #status.error, #login-status.error { background: #f6dfdd; border-color: rgba(184,74,69,.35); color: #8f332f; }
+    footer { color: #6f6a62; }
   </style>
 </head>
 <body>

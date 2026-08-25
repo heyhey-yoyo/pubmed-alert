@@ -88,3 +88,7 @@ npm run deploy     # 部署
 > - 修改存储架构或检索语义（edat 窗口、MAX_RESULTS 暂停、幂等作废）前先读本文件与 README 相关章节
 > - 新增 DO 内部接口必须经 `runExclusive` 串行化，并补充对应测试
 > - 部署前必须通过 `npm run check`
+
+## 界面维护约定
+
+管理页面使用 `ydchen-portfolio` 的米白 / 赤陶色视觉系统；本次仅调整 `src/ui.ts` 的展示层，不改变认证、检索窗口、Cron、邮件幂等或 Durable Object 状态语义。
