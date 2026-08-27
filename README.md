@@ -59,7 +59,7 @@ npm ci
 npm run check
 ```
 
-项目没有运行时 npm 依赖。检查和部署脚本会下载明确指定版本的 TypeScript/Wrangler，因此首次执行需要能够访问 npm registry。
+项目没有运行时 npm 依赖。TypeScript 与 Wrangler 是锁定版本的开发依赖；先运行 `npm ci`，检查、开发和部署脚本不会再临时下载工具。
 
 本地开发：
 
@@ -82,22 +82,22 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
 先登录：
 
 ```bash
-npx --yes wrangler@4.117.0 login
+npm exec -- wrangler login
 ```
 
 依次设置：
 
 ```bash
-npx --yes wrangler@4.117.0 secret put ADMIN_TOKEN
-npx --yes wrangler@4.117.0 secret put RESEND_API_KEY
-npx --yes wrangler@4.117.0 secret put MAIL_FROM
-npx --yes wrangler@4.117.0 secret put NCBI_CONTACT_EMAIL
+npm exec -- wrangler secret put ADMIN_TOKEN
+npm exec -- wrangler secret put RESEND_API_KEY
+npm exec -- wrangler secret put MAIL_FROM
+npm exec -- wrangler secret put NCBI_CONTACT_EMAIL
 ```
 
 可选：
 
 ```bash
-npx --yes wrangler@4.117.0 secret put NCBI_API_KEY
+npm exec -- wrangler secret put NCBI_API_KEY
 ```
 
 建议：
@@ -231,7 +231,7 @@ npm run deploy
 确认 `ADMIN_TOKEN` 已设置，且网页中输入的值与之一致。未设置 `ADMIN_TOKEN` 时所有管理 API 都会拒绝访问：
 
 ```bash
-npx --yes wrangler@4.117.0 secret put ADMIN_TOKEN
+npm exec -- wrangler secret put ADMIN_TOKEN
 ```
 
 **Resend 返回 403 或域名错误**

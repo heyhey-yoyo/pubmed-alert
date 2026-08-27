@@ -19,7 +19,7 @@
 - TypeScript 严格模式（`strict`、`noUncheckedIndexedAccess`），**零 npm 运行时依赖**
 - Cloudflare Workers + Durable Object（SQLite storage），无 Web 框架，手写 `fetch` 路由（`ALLOWED_API_ROUTES` 白名单）
 - 外部服务：NCBI E-utilities（ESearch/ESummary）、Resend API（支持幂等键）
-- 依赖通过 `npx --yes` 按固定版本下载：`wrangler@4.117.0`、`typescript@5.8.3`（锁定在 package.json scripts 中）
+- TypeScript 与 Wrangler 作为固定版本的开发依赖，版本由 `package-lock.json` 锁定；生产 Worker 仍保持零 npm 运行时依赖
 
 ## 仓库结构
 
