@@ -43,6 +43,7 @@
 ## 运行与构建
 
 ```bash
+npm ci             # 按锁文件安装固定开发工具
 npm run dev        # 本地开发（--test-scheduled 支持手动触发 Cron）
 npm run check      # typecheck + 测试，部署前必须通过
 npm run deploy     # 部署
