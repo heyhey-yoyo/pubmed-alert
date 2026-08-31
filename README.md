@@ -2,55 +2,41 @@
 
 一个面向单用户的 Cloudflare Worker：在网页中保存 PubMed 检索式和收件邮箱，Cloudflare Cron 每小时检查一次；发现新的 PMID 后，通过 Resend 发送汇总邮件。
 
+## 主要功能
+
+- 首次检查只建立基线，不发送已有论文
+- 按 PubMed Entry Date（`edat`）追踪，并从上次成功检索时间继续追赶
+- 检索结果超过上限时明确暂停，避免 `retmax` 截断导致静默漏报
+- 邮件发送前持久化待发送状态，并使用 Resend 幂等键降低重复邮件概率
+- 单例 Durable Object 串行协调配置、手动检查与 Cron 检查
+- 管理 API 使用 `ADMIN_TOKEN` Bearer Token 保护；未设置时所有管理 API 拒绝访问
+- 默认仅在 `sessionStorage` 保存管理员口令，可由用户选择长期记住
+- CSP、安全响应头、请求体大小限制、外部请求超时和有限重试
+- 部署由 Cloudflare Workers Builds 自动完成；部署前自动运行类型检查与测试，失败则不会部署
+
 ## 界面风格
 
 管理页面采用 `ydchen-portfolio` 的暖米白、浅灰与赤陶色视觉系统，使用衬线标题和扁平化设置卡片；认证、配置、Cron 和邮件幂等语义保持不变。
 
 设置页面正文采用 15px 以上基线，说明、记住状态和页脚文字不小于 13px；桌面与手机端不得出现页面整体横向溢出。
 
-## 主要特性
+## 数据与隐私
 
-- 首次检查只建立基线，不发送已有论文
-- 按 PubMed **Entry Date（`edat`）** 追踪，并从上次成功检索时间继续追赶
-- 检索结果超过上限时明确暂停，避免 `retmax` 截断导致静默漏报
-- 邮件发送前持久化待发送状态，并使用 Resend 幂等键降低重复邮件概率
-- 单例 Durable Object 串行协调配置、手动检查与 Cron 检查
-- 管理 API 使用 `ADMIN_TOKEN` Bearer Token 保护；未设置 `ADMIN_TOKEN` 时所有管理 API 拒绝访问
-- 默认仅在 `sessionStorage` 保存管理员口令；可由用户选择长期记住
-- CSP、安全响应头、请求体大小限制、外部请求超时和有限重试
-- TypeScript 严格检查和核心逻辑回归测试
-- 部署由 Cloudflare Workers Builds 自动完成；部署前自动运行类型检查与测试，失败则不会部署
+- 这是单用户工具，没有账户系统
+- 管理页面地址可以公开访问，但 `/api/*` 必须通过 Bearer Token 鉴权
+- 默认只在当前浏览器会话保存 Token；勾选「长期记住」会写入 `localStorage`
+- 页面使用严格 CSP nonce，不使用动态 `innerHTML` 渲染服务端状态
+- 不要把 `.dev.vars`、Cloudflare Token、Resend Key、管理员口令或 NCBI Key 提交到 GitHub
 
-## 架构
+## 本地运行
 
-```text
-浏览器
-  └─ Cloudflare Worker（网页、鉴权、管理 API）
-       └─ 单例 AlertCoordinator Durable Object
-            ├─ SQLite-backed Durable Object Storage（配置、状态、待发送邮件）
-            ├─ NCBI ESearch / ESummary（PubMed）
-            └─ Resend API（邮件）
-
-Cloudflare Cron Trigger ──每小时──> AlertCoordinator
-```
-
-本版本不再需要 Workers KV。Durable Object 用于把同一提醒的状态写入和检查操作集中到一个强一致协调点。
-
-## 需要准备
+需要：
 
 1. Cloudflare 账户
 2. GitHub 账户（使用自动部署时）
 3. Node.js 22 或更新版本
 4. Resend 账户、API Key，以及已验证的发件域名
 5. NCBI 联系邮箱；NCBI API Key 可选
-
-`MAIL_FROM` 必须使用 Resend 已验证域名，例如：
-
-```text
-PubMed Alert <alerts@example.com>
-```
-
-## 本地安装与检查
 
 ```bash
 git clone <你的仓库地址>
@@ -69,48 +55,27 @@ cp .dev.vars.example .dev.vars
 npm run dev
 ```
 
-触发本地 Cron：
-
-```bash
-curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
-```
-
 `.dev.vars` 已被 `.gitignore` 排除，禁止提交真实密钥。
 
-## 设置 Cloudflare Secrets
+## 部署
 
-先登录：
+先登录并设置 Secrets：
 
 ```bash
 npm exec -- wrangler login
-```
-
-依次设置：
-
-```bash
 npm exec -- wrangler secret put ADMIN_TOKEN
 npm exec -- wrangler secret put RESEND_API_KEY
 npm exec -- wrangler secret put MAIL_FROM
 npm exec -- wrangler secret put NCBI_CONTACT_EMAIL
 ```
 
-可选：
+可选设置 NCBI API Key：
 
 ```bash
 npm exec -- wrangler secret put NCBI_API_KEY
 ```
 
-建议：
-
-- `ADMIN_TOKEN`：必填，无长度限制；未设置时所有管理 API 拒绝访问。建议使用足够长的随机值，例如 `openssl rand -base64 32`
-- `RESEND_API_KEY`：Resend 创建的 API Key
-- `MAIL_FROM`：使用已验证域名的发件人
-- `NCBI_CONTACT_EMAIL`：程序维护者联系邮箱
-- `NCBI_API_KEY`：NCBI 对未设置 API Key 的请求按来源 IP 限流（每秒 3 次）。Cloudflare Worker 的出站 IP 与其他用户共享，可能被连带限流返回 429；设置 API Key 后改为按密钥限流（每秒 10 次），可避免大多数 429
-
-## 部署
-
-不需要手动创建 Durable Object 或 KV namespace。配置已经在 `wrangler.jsonc` 中声明。
+部署：
 
 ```bash
 npm run check
@@ -122,218 +87,16 @@ npm run deploy
 1. 打开 Wrangler 输出的 `workers.dev` 地址
 2. 输入 `ADMIN_TOKEN`
 3. 保存 PubMed 检索式、收件邮箱和启用状态
-4. 点击“立即检查”建立基线
-5. 点击“发送测试邮件”验证 Resend
+4. 点击「立即检查」建立基线
+5. 点击「发送测试邮件」验证 Resend
 
-## 从旧 KV 版本升级
+`MAIL_FROM` 必须使用 Resend 已验证域名，例如 `PubMed Alert <alerts@example.com>`。
 
-**存储架构已从 Workers KV 改为 Durable Object。**
+代码部署由 Cloudflare Workers Builds 完成：在 Cloudflare Dashboard 连接本仓库，Production branch 选择 `main`，构建命令填 `npm run check`。推送到 `main` 后自动检测并部署。
 
-旧 KV 中的数据不会自动复制到新存储。升级步骤：
-
-1. 记录旧网页中的关键词、收件邮箱和启用状态
-2. 部署当前版本
-3. 在新网页中重新保存配置
-4. 点击“立即检查”建立新基线
-5. 确认测试邮件和定时检查正常后，再决定是否删除旧 KV namespace
-
-重新建基线会把当前检索结果视为“已有”，因此不会补发历史论文。这是为了避免升级时一次性发送大量旧记录。
-
-## Cloudflare 自动部署
-
-代码部署由 Cloudflare **Workers Builds** 完成：在 Cloudflare Dashboard（Workers & Pages → `pubmed-alert` → Settings → Builds）连接本仓库，Production branch 选择 `main`，构建命令填 `npm run check`（部署前先跑类型检查和测试，失败则不会部署）。
-
-推送到 `main` 后，Workers Builds 自动检测并部署。无需在 GitHub 配置任何 Token；运行时的 `ADMIN_TOKEN`、`RESEND_API_KEY` 等仍保存在 Cloudflare Worker Secrets 中，不要写入仓库。
-
-## 修改检查频率
-
-`wrangler.jsonc` 默认：
-
-```jsonc
-"triggers": {
-  "crons": ["0 * * * *"]
-}
-```
-
-表示每小时第 0 分钟执行。Cloudflare Cron 使用 UTC。
-
-示例：
-
-- 每 6 小时：`0 */6 * * *`
-- 每天 08:00 UTC：`0 8 * * *`
-
-修改后重新部署。
-
-## 检索参数
-
-`wrangler.jsonc` 中的默认值：
-
-```jsonc
-"vars": {
-  "SEARCH_WINDOW_DAYS": "7",
-  "SEARCH_OVERLAP_DAYS": "2",
-  "MAX_CATCHUP_DAYS": "60",
-  "MAX_RESULTS": "2000",
-  "REQUEST_TIMEOUT_MS": "15000"
-}
-```
-
-- `SEARCH_WINDOW_DAYS`：首次建基线时回看天数，范围 1–30
-- `SEARCH_OVERLAP_DAYS`：后续检查从上次成功时间向前重叠，范围 0–7；默认 2 天用于覆盖 PubMed 日期精度和边界延迟
-- `MAX_CATCHUP_DAYS`：停机后允许自动追赶的最长时间，范围 30–3650；超过后暂停并要求人工决定
-- `MAX_RESULTS`：一次 ESearch 允许的最大结果数，范围 1–10000
-- `REQUEST_TIMEOUT_MS`：NCBI 和 Resend 单次请求超时，范围 2000–60000 毫秒
-
-当检索结果数大于 `MAX_RESULTS` 时，程序不会使用被截断的 PMID 列表，也不会推进成功检查时间。请缩小检索式或提高上限。
-
-示例检索式：
-
-```text
-("spatial transcriptomics"[Title/Abstract]) AND cancer[Title/Abstract]
-```
-
-## 页面说明
-
-打开页面先显示**登录界面**，输入管理员口令（`ADMIN_TOKEN`）后点击"登录"（或按回车）进入设置页。口令正确后自动读取状态；口令错误会在登录界面显示提示。
-
-- **保存配置**：保存检索式、邮箱和启用状态；更换检索式会自动清空旧基线
-- **立即检查**：手动执行一次完整检查并发送新文献邮件；即使「定时自动检查」已关闭也会执行
-- **发送测试邮件**：不查询 PubMed，仅验证发信配置
-- **重建基线**：清空已见 PMID；下一次检查只建立基线
-- **退出登录**：从 `sessionStorage` 和 `localStorage` 清除管理员口令并返回登录界面
-
-## 安全说明
-
-- 管理页面地址可以公开访问，但 `/api/*` 必须通过 Bearer Token 鉴权
-- 未设置 `ADMIN_TOKEN` 时所有管理 API 拒绝访问
-- 默认只在当前浏览器会话保存 Token；“长期记住”会写入 `localStorage`
-- 页面使用严格 CSP nonce，不使用动态 `innerHTML` 渲染服务端状态
-- API 响应不缓存，并设置 `nosniff`、`no-referrer`、`noindex`
-- 外部请求禁止自动跟随重定向，避免把 Authorization Header 转发到意外目标
-- 不要把 `.dev.vars`、Cloudflare Token、Resend Key、管理员口令或 NCBI Key 提交到 GitHub
+## 责任边界
 
 这是单用户工具，没有账户系统。若需要多人使用、审计日志或企业身份认证，建议在 Worker 前增加 Cloudflare Access，而不是共享管理员口令。
-
-## 邮件可靠性说明
-
-发现新记录时，程序先保存 `pendingNotification`，再调用 Resend。发送失败后，下次检查优先重试同一批 PMID，并复用同一幂等键。
-
-同一批次**连续 5 次发送失败后自动作废**：该批 PMID 会被标记为已见并停止重试，状态页显示作废记录及原因。作废的批次不会自动补发，请先修复 Resend 配置（API Key、发件域名），需要补发时人工处理。
-
-关闭「定时自动检查」时，若存在待发送批次也会一并作废（标记为已见），避免重新启用后补发过期邮件。
-
-仍存在一个不可完全消除的边界：如果 Resend 已接受邮件、但 Worker 没收到成功响应，并且重试发生在 Resend 幂等窗口之外，可能重复发送。状态页会显示待重试批次，便于人工检查。
-
-## 常见问题
-
-**提示"管理员口令不正确"**
-
-确认 `ADMIN_TOKEN` 已设置，且网页中输入的值与之一致。未设置 `ADMIN_TOKEN` 时所有管理 API 都会拒绝访问：
-
-```bash
-npm exec -- wrangler secret put ADMIN_TOKEN
-```
-
-**Resend 返回 403 或域名错误**
-
-确认：
-
-- `MAIL_FROM` 域名已在 Resend 验证
-- API Key 属于正确的 Resend 账户
-- 发件地址格式正确
-
-**检查提示 PubMed 请求被限流（HTTP 429）**
-
-程序对 429 会尊重 `Retry-After` 并按指数退避自动重试（最多 3 次）。若仍失败，报错会提示：
-
-- 未设置 `NCBI_API_KEY` 时，NCBI 按**来源 IP** 限流（每秒 3 次），而 Cloudflare Worker 的出站 IP 与其他用户共享，容易被连带限流
-- 建议 `wrangler secret put NCBI_API_KEY` 设置密钥（改为按密钥限流、每秒 10 次），并确认已设置 `NCBI_CONTACT_EMAIL`
-
-限流失败不会推进检查状态，下次定时检查会自动重试，不会漏报。
-
-**检查提示结果超过 `MAX_RESULTS`**
-
-程序为避免漏报而主动停止。优先缩小检索式；确有需要时提高 `MAX_RESULTS`，最高 10000。
-
-**很久未运行后要求重建基线**
-
-停机时间超过 `MAX_CATCHUP_DAYS` 后，程序不会猜测是否应补发大量历史记录。可以提高追赶天数后再检查，或在确认不需要补发后点击“重建基线”。
-
-**更换关键词后为什么没有立刻发送**
-
-更换检索式后的第一次检查只建立新基线，避免把已有结果当作新论文。
-
-## 文件结构
-
-```text
-.
-├── .github/
-│   └── SECURITY.md
-├── src/
-│   ├── alert-engine.ts
-│   ├── coordinator.ts
-│   ├── email-template.ts
-│   ├── errors.ts
-│   ├── globals.d.ts
-│   ├── http.ts
-│   ├── index.ts
-│   ├── mailer.ts
-│   ├── pubmed.ts
-│   ├── types.ts
-│   ├── ui.ts
-│   └── utils.ts
-├── tests/core.test.mjs
-├── .dev.vars.example
-├── package-lock.json
-├── package.json
-├── tsconfig.json
-├── tsconfig.test.json
-└── wrangler.jsonc
-```
-
-## 运行检查
-
-```bash
-npm ci
-npm run typecheck
-npm test
-npm run check
-```
-
-## 回滚
-
-**Git 回滚**
-
-在 GitHub 中找到升级前提交，然后：
-
-```bash
-git revert <升级提交哈希>
-git push origin main
-```
-
-**使用旧项目重新部署**
-
-交付包包含原始项目备份和校验值。恢复旧 KV 版本时需要：
-
-1. 恢复旧项目文件
-2. 在旧 `wrangler.jsonc` 中填回原 KV namespace ID
-3. 确认旧 KV namespace 仍存在
-4. 运行旧版部署命令
-
-**Cloudflare 版本回滚**
-
-也可以在 Cloudflare Dashboard 的 Worker 部署记录中回滚到上一版本。回滚后仍应验证绑定、Cron 和 Secrets 是否与旧版本匹配。
-
-## 参考资料
-
-- Cloudflare Durable Objects：https://developers.cloudflare.com/durable-objects/
-- Cloudflare Durable Object configuration：https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
-- Cloudflare Cron Triggers：https://developers.cloudflare.com/workers/configuration/cron-triggers/
-- NCBI E-utilities：https://www.ncbi.nlm.nih.gov/books/NBK25501/
-- NCBI ESearch：https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch
-- Resend Cloudflare Workers：https://resend.com/docs/send-with-cloudflare-workers
-- Resend Idempotency：https://resend.com/docs/dashboard/emails/idempotency-keys
-- GitHub Actions secure use：https://docs.github.com/actions/security-guides/security-hardening-for-github-actions
 
 ## License
 
@@ -350,8 +113,3 @@ MIT
 > **⚠️ 任何修改此项目的 AI 代理（Claude Code、Cursor、Copilot 等）都必须同步更新本文件与 [AGENTS.md](./AGENTS.md)。**
 >
 > - 修改存储架构（Durable Object / SQLite）或检索语义前先读 [AGENTS.md](./AGENTS.md) 的相关章节
-
-
-## 项目标志
-
-页面标志与浏览器标题栏图标共用 `project-mark.svg`：深灰方章、米白线条与赤陶色识别点形成统一系列，同时保留本项目的专属主题符号。替换标志时不得改变现有标志容器尺寸或页面布局。
