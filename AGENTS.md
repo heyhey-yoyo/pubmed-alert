@@ -1,4 +1,4 @@
-# PubMed 关键词邮件提醒 — AI 代理工作指南
+# PubMed 关键词邮件提醒 — 项目说明（供 AI 编程代理阅读）
 
 本文件供 AI 编码代理（Claude Code、Codex、Cursor 等）使用。修改代码前请先阅读本文件。
 
@@ -39,6 +39,11 @@
 | `src/globals.d.ts` | 手写 cloudflare:workers DO 类型声明 |
 | `tests/core.test.mjs` | 回归测试（17 个用例），从 `.test-dist/` 导入编译产物 |
 | `wrangler.jsonc` | Worker 配置（Cron、DO 绑定、vars） |
+| `tsconfig.json` / `tsconfig.test.json` | TS 配置（`typecheck` / `build:test` 分别引用） |
+| `package.json` / `package-lock.json` | npm 脚本与锁定开发依赖 |
+| `.dev.vars.example` | 本地 secrets 模板（5 个密钥） |
+| `.github/SECURITY.md` | 安全政策 |
+| `LICENSE` | MIT 许可证 |
 
 ## 运行与构建
 
@@ -67,7 +72,7 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
 - 依赖注入：`AlertEngine` 构造注入 store/pubmed/mailer/时钟，测试用内存 mock
 - 业务错误统一抛 `AppError(message, status, expose)`，`expose=false` 时对外返回「服务暂时不可用」
 - 所有 env vars 经 `clampNumber(raw, fallback, min, max)` 取值，越界回退默认值
-- 存储记录带 `version` 字段；旧 KV 版本需人工迁移（README「从旧 KV 版本升级」节）
+- 存储记录带 `version` 字段（当前存储键 `alert:data:v2`）；旧 KV 版本需人工迁移，代码中无自动迁移逻辑
 - 代码注释与用户可见消息全部为中文
 
 ## 部署
@@ -92,7 +97,7 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
 
 ## 标志维护约定
 
-项目标志采用统一的深灰方章、米白线条与赤陶色识别点，页面标志与 favicon 共用同一 `project-mark.svg`。后续替换必须保持原标志容器宽高，不得借机改变页眉、网格或页面布局。
+项目标志采用统一的深灰方章、米白线条与赤陶色识别点，页面标志与 favicon 共用同一图形；该 SVG 以 `PROJECT_MARK` 常量内嵌于 `src/index.ts`，经 `/project-mark.svg` 路由提供，仓库无独立 SVG 文件。后续替换必须保持原标志容器宽高，不得借机改变页眉、网格或页面布局。
 
 ---
 
