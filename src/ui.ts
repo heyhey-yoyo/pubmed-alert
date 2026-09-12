@@ -12,66 +12,110 @@ export function renderPage(appName: string, nonce: string): string {
   <title>${safeName}</title>
   <link rel="icon" href="/project-mark.svg" type="image/svg+xml" />
   <style nonce="${nonce}">
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    :root {
+  color-scheme: light;
+  font-family: var(--type-body);
+  --type-body:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+  --type-heading:Georgia, "Times New Roman", "Songti SC", "STSong", serif;
+  --type-mono:"SFMono-Regular", Consolas, "Liberation Mono", "Microsoft YaHei", monospace;
+  --size-meta:.75rem;
+  --size-small:.8125rem;
+  --size-label:.875rem;
+  --size-control:.9375rem;
+  --size-body:1rem;
+  --size-subheading:1.125rem;
+  --size-section:1.25rem;
+  --size-heading:1.5rem;
+  --brand-accent:#a94f31;
+  --brand-paper:#f3eee5;
+  --brand-ink:#24221f;
+  --brand-muted:#5f5a53;
+  --brand-pad:clamp(16px,4.5vw,72px);
+  font-size:16px;
+}
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #f4f7fb; color: #172033; }
+    body { margin: 0; min-height: 100vh; }
     .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px 64px; }
-    .eyebrow { color: #2463eb; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+    .eyebrow { font-weight: 800; font-size: var(--size-small); letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
     .page-title { display: flex; align-items: center; gap: 14px; }
     .page-title img { width: 44px; height: 44px; flex: 0 0 44px; }
-    .lead { margin: 0 0 28px; max-width: 680px; color: #59657a; font-size: 17px; line-height: 1.7; }
-    .card { background: #fff; border: 1px solid #dfe6f1; border-radius: 18px; padding: 24px; box-shadow: 0 18px 55px rgba(34,55,94,.08); }
+    .lead { margin: 0 0 28px; max-width: 680px; font-size: 17px; line-height: 1.7; }
+    .card { border: 1px solid #dfe6f1; padding: 24px; }
     [hidden] { display: none !important; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     .full { grid-column: 1 / -1; }
-    label, .label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 800; color: #334155; }
-    input[type="text"], input[type="email"], input[type="password"] { width: 100%; border: 1px solid #cfd8e6; border-radius: 10px; padding: 12px 13px; font: inherit; outline: none; }
-    input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid rgba(36,99,235,.35); outline-offset: 2px; }
-    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus { border-color: #2463eb; box-shadow: 0 0 0 3px rgba(36,99,235,.12); }
-    .hint { margin-top: 7px; color: #5f5a53; font-size: 13px; line-height: 1.5; }
+    label { display: block; margin-bottom: 7px; font-size: var(--size-small); font-weight: 800; color: #334155; }
+    .label { display: block; margin-bottom: 7px; font-size: var(--size-small); font-weight: 800; color: #334155; }
+    input[type="text"] { width: 100%; border: 1px solid #cfd8e6; padding: 12px 13px; font: inherit; outline: none; }
+    input[type="email"] { width: 100%; border: 1px solid #cfd8e6; padding: 12px 13px; font: inherit; outline: none; }
+    input[type="password"] { width: 100%; border: 1px solid #cfd8e6; padding: 12px 13px; font: inherit; outline: none; }
+    input:focus-visible { outline: 3px solid rgba(36,99,235,.35); outline-offset: 2px; }
+    button:focus-visible { outline: 3px solid rgba(36,99,235,.35); outline-offset: 2px; }
+    a:focus-visible { outline: 3px solid rgba(36,99,235,.35); outline-offset: 2px; }
+    .hint { margin-top: 7px; color: #5f5a53; font-size: var(--size-small); line-height: 1.5; }
     .switch { display: flex; align-items: center; gap: 10px; min-height: 44px; }
-    .remember { margin-top: 9px; display: flex; align-items: center; gap: 8px; color: #5f5a53; font-size: 13px; }
+    .remember { margin-top: 9px; display: flex; align-items: center; gap: 8px; color: #5f5a53; font-size: var(--size-small); }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-    button { border: 0; border-radius: 10px; padding: 11px 16px; font: inherit; font-weight: 800; cursor: pointer; background: #e8eef8; color: #25324a; }
-    button.primary { background: #2463eb; color: white; }
-    button.danger { background: #fff1f2; color: #9f1239; }
+    button { border: 0; padding: 11px 16px; font: inherit; font-weight: 800; cursor: pointer; background: #e8eef8; color: #25324a; }
     button:hover:not(:disabled) { transform: translateY(-1px); }
     button:disabled { opacity: .55; cursor: wait; transform: none; }
-    #status, #login-status { margin-top: 18px; padding: 14px; border-radius: 10px; background: #f7f9fc; border: 1px solid #e2e8f0; min-height: 48px; color: #42516a; white-space: pre-wrap; line-height: 1.55; }
-    #status.error, #login-status.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+    #status { margin-top: 18px; padding: 14px; border: 1px solid #e2e8f0; min-height: 48px; white-space: pre-wrap; line-height: 1.55; }
+    #login-status { margin-top: 18px; padding: 14px; border: 1px solid #e2e8f0; min-height: 48px; white-space: pre-wrap; line-height: 1.55; }
     #login-status:empty { display: none; }
-    .meta { margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 18px; color: #64748b; font-size: 13px; }
+    .meta { margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 18px; color: #64748b; font-size: var(--size-small); }
     .meta div { overflow-wrap: anywhere; }
     .login-card { max-width: 460px; margin: 0 auto; }
-    .login-card h2 { margin: 0 0 6px; font-size: 20px; }
-    .login-lead { margin: 0 0 18px; color: #59657a; font-size: 14px; line-height: 1.6; }
-    .login-card form button { width: 100%; margin-top: 18px; padding: 13px 16px; font-size: 15px; }
-    footer { margin-top: 22px; color: #5f5a53; font-size: 13px; line-height: 1.6; }
+    .login-card h2 { margin: 0 0 6px; font-size: var(--size-section); }
+    .login-lead { margin: 0 0 18px; font-size: var(--size-label); line-height: 1.6; }
+    .login-card form button { width: 100%; margin-top: 18px; padding: 13px 16px; font-size: var(--size-control); }
+    footer { margin-top: 22px; font-size: var(--size-small); line-height: 1.6; }
     footer a { color: inherit; }
-    @media (max-width: 650px) { .grid, .meta { grid-template-columns: 1fr; } .full { grid-column: auto; } .card { padding: 19px; } }
+    @media (max-width: 650px) { .grid { grid-template-columns: 1fr; } .meta { grid-template-columns: 1fr; } .full { grid-column: auto; } .card { padding: 19px; } }
     @media (prefers-reduced-motion: reduce) { button { transform: none !important; } }
     /* Portfolio visual system for the settings page. */
-    body { background: radial-gradient(circle at 84% -10%, rgba(193,95,60,.1), transparent 30%), #f3eee5; color: #24221f; }
-    h1, h2 { font-family: Georgia, "Times New Roman", "Songti SC", serif; font-weight: 400; }
+    body { background: radial-gradient(circle at 84% -10%, rgba(169,79,49,.1), transparent 30%), #f3eee5; color: #24221f; }
+    h1 { font-family: var(--type-heading); font-weight: 400; }
+    h2 { font-family: var(--type-heading); font-weight: 400; }
     .card { background: rgba(255,252,247,.84); border-color: rgba(36,34,31,.18); border-radius: 0; box-shadow: none; }
-    .eyebrow { color: #c15f3c; }
-    .lead, .login-lead { color: #6f6a62; }
-    input[type="text"], input[type="email"], input[type="password"] { background: rgba(255,255,255,.46); border-color: rgba(36,34,31,.3); border-radius: 0; color: #24221f; }
-    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus { border-color: #c15f3c; box-shadow: 0 0 0 3px rgba(193,95,60,.14); }
+    .eyebrow { color: #a94f31; }
+    .lead { color: #5f5a53; }
+    .login-lead { color: #5f5a53; }
+    input[type="text"] { background: rgba(255,255,255,.46); border-color: rgba(36,34,31,.3); border-radius: 0; color: #24221f; }
+    input[type="email"] { background: rgba(255,255,255,.46); border-color: rgba(36,34,31,.3); border-radius: 0; color: #24221f; }
+    input[type="password"] { background: rgba(255,255,255,.46); border-color: rgba(36,34,31,.3); border-radius: 0; color: #24221f; }
+    input[type="text"]:focus { border-color: #a94f31; box-shadow: 0 0 0 3px rgba(169,79,49,.14); }
+    input[type="email"]:focus { border-color: #a94f31; box-shadow: 0 0 0 3px rgba(169,79,49,.14); }
+    input[type="password"]:focus { border-color: #a94f31; box-shadow: 0 0 0 3px rgba(169,79,49,.14); }
     button { border-radius: 0; box-shadow: none; }
-    button.primary { background: #c15f3c; color: #fffaf5; }
+    button.primary { background: #a94f31; color: #fffaf5; }
     button.danger { background: #f6dfdd; color: #8f332f; }
-    #status, #login-status { background: #ebe4d8; border-color: rgba(36,34,31,.18); color: #4f4b45; border-radius: 0; }
-    #status.error, #login-status.error { background: #f6dfdd; border-color: rgba(184,74,69,.35); color: #8f332f; }
-    footer { color: #6f6a62; }
+    #status { background: #ebe4d8; border-color: rgba(36,34,31,.18); color: #4f4b45; border-radius: 0; }
+    #login-status { background: #ebe4d8; border-color: rgba(36,34,31,.18); color: #4f4b45; border-radius: 0; }
+    #status.error { background: #f6dfdd; border-color: rgba(184,74,69,.35); color: #8f332f; }
+    #login-status.error { background: #f6dfdd; border-color: rgba(184,74,69,.35); color: #8f332f; }
+    footer { color: #5f5a53; }
+    /* 全项目共用字体层级；页眉另按 Tools、普通项目与个人主页分组。 */
+    body{font-family:var(--type-body);font-size:var(--size-body);line-height:1.6}
+
+/* Tools 品牌页眉：桌面 72px、手机 64px 起，附加管理操作独立换行。 */
+.site-header{min-height:72px;height:auto;padding:0;border-bottom:1px solid rgba(36,34,31,.18);background:rgba(255,252,247,.94)}
+.site-header .header-inner{width:100%;max-width:1280px;min-height:71px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:16px}
+.site-header .header-brand{display:flex;align-items:baseline;flex:0 0 auto;white-space:nowrap;line-height:1}
+.site-header .brand-bold{font-family:var(--type-heading);font-size:20px;font-weight:600;line-height:1;letter-spacing:-.025em;color:var(--brand-ink)}
+.site-header .brand-light{font-family:var(--type-body);font-size:20px;font-weight:300;line-height:1;margin-left:6px;letter-spacing:0;color:var(--brand-muted)}
+.site-header .header-divider{display:block;flex:0 0 1px;width:1px;height:36px;background:rgba(36,34,31,.2)}
+.site-header .header-info{min-width:0;flex:1}
+.site-header .header-info h1{margin:0;font-family:var(--type-body);font-size:18px;font-weight:600;line-height:1.4;letter-spacing:0;color:var(--brand-ink);white-space:normal;overflow-wrap:anywhere}
+@media(max-width:640px){.site-header{min-height:64px}.site-header .header-inner{min-height:63px;gap:12px;padding:12px 16px}.site-header .brand-bold{font-size:18px}.site-header .brand-light{font-size:18px}.site-header .header-divider{height:32px}.site-header .header-info h1{font-size:16px}}
   </style>
 </head>
 <body>
+  <header class="site-header"><div class="header-inner"><div class="header-brand" aria-label="YDchen Tools"><span class="brand-bold">YDchen</span><span class="brand-light">Tools</span></div><div class="header-divider" aria-hidden="true"></div><div class="header-info"><h1>${safeName}</h1></div></div></header>
   <main class="wrap">
-    <div class="page-title"><img src="/project-mark.svg" alt="" aria-hidden="true" /><h1>${safeName}</h1></div>
     <p class="lead">设置一个 PubMed 检索式和收件邮箱。系统每小时检查一次，只有出现未见过的 PMID 才发送邮件。</p>
 
+    <p id="storage-warning" role="status" hidden></p>
     <section id="login-view" class="card login-card" aria-labelledby="login-title">
       <h2 id="login-title">登录</h2>
       <p class="login-lead">请输入管理员口令以管理提醒设置。</p>
@@ -122,18 +166,27 @@ export function renderPage(appName: string, nonce: string): string {
   const rememberInput = $("remember");
   const loginView = $("login-view");
   const mainView = $("main-view");
-  const savedToken = localStorage.getItem("pubmed-alert-token");
-  tokenInput.value = savedToken || sessionStorage.getItem("pubmed-alert-token") || "";
+  function storageAccess(kind, method, value) {
+    try { return window[kind][method]("pubmed-alert-token", value); }
+    catch {
+      const warning = $("storage-warning");
+      warning.hidden = false;
+      warning.textContent = "浏览器未允许保存或清除口令。当前页面仍可登录使用，刷新后可能需要重新输入；共享设备请检查浏览器的站点存储设置。";
+      return null;
+    }
+  }
+  const savedToken = storageAccess("localStorage", "getItem");
+  tokenInput.value = savedToken || storageAccess("sessionStorage", "getItem") || "";
   rememberInput.checked = Boolean(savedToken);
 
   function persistToken() {
     const token = tokenInput.value.trim();
     if (rememberInput.checked) {
-      localStorage.setItem("pubmed-alert-token", token);
-      sessionStorage.removeItem("pubmed-alert-token");
+      storageAccess("localStorage", "setItem", token);
+      storageAccess("sessionStorage", "removeItem");
     } else {
-      sessionStorage.setItem("pubmed-alert-token", token);
-      localStorage.removeItem("pubmed-alert-token");
+      storageAccess("sessionStorage", "setItem", token);
+      storageAccess("localStorage", "removeItem");
     }
   }
 
@@ -290,8 +343,8 @@ export function renderPage(appName: string, nonce: string): string {
   $("logout").addEventListener("click", () => {
     tokenInput.value = "";
     rememberInput.checked = false;
-    localStorage.removeItem("pubmed-alert-token");
-    sessionStorage.removeItem("pubmed-alert-token");
+    storageAccess("localStorage", "removeItem");
+    storageAccess("sessionStorage", "removeItem");
     showLogin("已退出登录。");
   });
 
