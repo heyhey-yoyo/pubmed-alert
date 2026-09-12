@@ -72,7 +72,13 @@ export default {
 
     return new Response("Not found", {
       status: 404,
-      headers: { "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" },
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "no-referrer",
+        "x-robots-tag": "noindex, nofollow, noarchive",
+      },
     });
   },
 

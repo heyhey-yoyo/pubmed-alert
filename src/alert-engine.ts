@@ -162,14 +162,19 @@ export class AlertEngine {
       await this.store.putState(state);
       return await this.deliverPending(state);
     } catch (error) {
-      const latestState = (await this.store.getState()) ?? state;
-      await this.store.putState({
-        ...latestState,
-        version: 2,
-        lastAttemptAt: attemptedAt,
-        lastError: errorMessage(error),
-        lastErrorAt: this.now().toISOString(),
-      });
+      // 记录错误状态时若再次抛错（如 DO 存储暂不可用），不得掩盖原始错误。
+      try {
+        const latestState = (await this.store.getState()) ?? state;
+        await this.store.putState({
+          ...latestState,
+          version: 2,
+          lastAttemptAt: attemptedAt,
+          lastError: errorMessage(error),
+          lastErrorAt: this.now().toISOString(),
+        });
+      } catch (persistError) {
+        console.error(JSON.stringify({ event: "alert_error_persist_failed", error: errorMessage(persistError) }));
+      }
       throw error;
     }
   }

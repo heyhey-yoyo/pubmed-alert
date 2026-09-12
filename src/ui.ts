@@ -15,7 +15,7 @@ export function renderPage(appName: string, nonce: string): string {
     :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #f4f7fb; color: #172033; }
-    .wrap { max-width: 820px; margin: 0 auto; padding: 48px 20px 64px; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px 64px; }
     .eyebrow { color: #2463eb; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 8px 0 10px; font-size: clamp(30px, 6vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
     .page-title { display: flex; align-items: center; gap: 14px; }
@@ -202,7 +202,7 @@ export function renderPage(appName: string, nonce: string): string {
   function formatDate(value) {
     if (!value) return "尚未";
     const date = new Date(value);
-    return Number.isFinite(date.getTime()) ? date.toLocaleString() : "无效时间";
+    return Number.isFinite(date.getTime()) ? date.toLocaleString("zh-CN") : "无效时间";
   }
 
   function renderStatus(data) {
@@ -270,12 +270,16 @@ export function renderPage(appName: string, nonce: string): string {
   }));
 
   $("check").addEventListener("click", () => run(async () => {
+    show("正在检查 PubMed，请稍候…");
     const data = await api("/api/check", { method: "POST", body: JSON.stringify({ force: true }) });
     show(data.result.message + (data.result.resultCount !== undefined ? "\\n检索窗口内结果：" + data.result.resultCount : ""));
     renderStatus(await api("/api/status"));
   }));
 
-  $("test").addEventListener("click", () => run(async () => show((await api("/api/test-email", { method: "POST", body: "{}" })).message)));
+  $("test").addEventListener("click", () => run(async () => {
+    show("正在发送测试邮件…");
+    show((await api("/api/test-email", { method: "POST", body: "{}" })).message);
+  }));
 
   $("rebaseline").addEventListener("click", () => run(async () => {
     if (!confirm("重建基线后，当前检索结果会被视为已有记录，不会发送历史论文。确定继续吗？")) return;
