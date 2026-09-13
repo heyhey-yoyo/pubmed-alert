@@ -37,7 +37,7 @@
 | `src/ui.ts` | 整页 HTML（登录 + 设置视图），内联 CSS/JS，CSP nonce |
 | `src/utils.ts` | `clampNumber`、`escapeHtml`、`constantTimeEqual`、`isAuthorized`、`findNewPmids` 等 |
 | `src/globals.d.ts` | 手写 cloudflare:workers DO 类型声明 |
-| `tests/core.test.mjs` | 回归测试（17 个用例），从 `.test-dist/` 导入编译产物 |
+| `tests/core.test.mjs` | 回归测试，覆盖配置校验、鉴权、检索窗口、去重、幂等与模板转义等核心路径；从 `.test-dist/` 导入编译产物 |
 | `wrangler.jsonc` | Worker 配置（Cron、DO 绑定、vars） |
 | `tsconfig.json` / `tsconfig.test.json` | TS 配置（`typecheck` / `build:test` 分别引用） |
 | `package.json` / `package-lock.json` | npm 脚本与锁定开发依赖 |
@@ -118,6 +118,8 @@ npm run check
 ## 标志维护约定
 
 项目标志采用统一的深灰方章、米白线条与赤陶色识别点，项目 favicon 使用该图形，页眉采用统一的 YDchen Tools 文字字标；该 SVG 以 `PROJECT_MARK` 常量内嵌于 `src/index.ts`，经 `/project-mark.svg` 路由提供，仓库无独立 SVG 文件。后续替换必须保持原标志容器宽高，不得借机改变页眉、网格或页面布局。
+
+---
 
 ## AI 维护提醒
 
