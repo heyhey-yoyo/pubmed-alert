@@ -63,7 +63,7 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
 ## 测试
 
 - Node 内置 `node:test`；`npm test` 先编译 `src/*.ts` 到 `.test-dist/` 再运行
-- 覆盖：配置校验、鉴权、搜索窗口计算、去重、邮件模板转义、首次建基线、幂等键复用、5 次失败作废、ESearch 参数断言、429 重试
+- 覆盖：配置校验、鉴权、搜索窗口计算、去重、邮件模板转义、首次建基线、幂等键复用、5 次失败作废、ESearch 参数断言、429 重试、慢响应正文超时及数值配置夹限
 - 测试用 `MemoryStore` + fake 网关/时钟注入，不发真实网络请求
 
 发布检查：
@@ -77,7 +77,7 @@ npm run check
 - 模块按职责单文件：入口 / DO 协调 / 业务引擎 / 外部网关（实现 `PubMedGateway`/`MailGateway` 接口）/ 模板 / 基础设施 / 纯类型
 - 依赖注入：`AlertEngine` 构造注入 store/pubmed/mailer/时钟，测试用内存 mock
 - 业务错误统一抛 `AppError(message, status, expose)`，`expose=false` 时对外返回「服务暂时不可用」
-- 所有 env vars 经 `clampNumber(raw, fallback, min, max)` 取值，越界回退默认值
+- 数值 env vars 经 `clampNumber(raw, fallback, min, max)` 解析为整数并夹到上下界；仅无法解析时回退默认值。字符串配置和 secrets 不走该函数
 - 存储记录带 `version` 字段（当前存储键 `alert:data:v2`）；旧 KV 版本需人工迁移，代码中无自动迁移逻辑
 - 代码注释与用户可见消息全部为中文
 
@@ -103,7 +103,9 @@ npm run check
 
 ## 部署
 
-- `wrangler.jsonc`：Cron `0 * * * *`（UTC）、DO binding `ALERT_COORDINATOR`（storage sqlite）、vars 全部经 `clampNumber` 回退
+对外版本以 GitHub Release 为准；应用版本源为根目录 `package.json`，发布时用 `npm install --package-lock-only` 同步 `package-lock.json`。内部数据格式、模型及提示词版本独立演进，不随应用发布机械递增。
+
+- `wrangler.jsonc`：Cron `0 * * * *`（UTC）、DO binding `ALERT_COORDINATOR`（storage sqlite）、数值 vars 使用 `clampNumber` 解析、夹限，无法解析时回退
 - Secrets（`wrangler secret put`，不写仓库）：`ADMIN_TOKEN`（必填）、`RESEND_API_KEY`、`MAIL_FROM`（须验证域名）、`NCBI_CONTACT_EMAIL`、可选 `NCBI_API_KEY`
 - Cloudflare Workers Builds 连接 GitHub：push main 自动部署，构建命令 `npm run check`，失败则不部署
 
@@ -112,8 +114,8 @@ npm run check
 - 未设置 `ADMIN_TOKEN` 时所有管理 API 一律拒绝；校验用常量时间比较
 - 前端默认仅 `sessionStorage` 存 token；勾选「长期记住」才写 `localStorage`
 - 页面 CSP nonce + HSTS + `frame-ancestors 'none'`；无动态 `innerHTML`
-- 外部请求：仅重试 429/5xx、`redirect: "manual"`、AbortController 超时；请求体上限 4096 字节
-- 单用户工具，无账户系统；邮件只含题录摘要
+- 外部请求：网络错误及 429/5xx 有限重试、`redirect: "manual"`、响应头与完整正文共用 AbortController/Promise 期限；请求体上限 4096 字节
+- 单用户工具，无账户系统；DO 保存配置/PMID/状态和待发邮件，无自动 TTL；待发内容在完成/作废时清除。NCBI 接收检索式/联系邮箱，Resend 接收收件人、主题、含检索式的题录邮件正文
 
 ## 标志维护约定
 

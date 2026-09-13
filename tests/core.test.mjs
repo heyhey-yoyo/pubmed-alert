@@ -362,3 +362,20 @@ test("幂等键绑定完整邮件负载，收件人变化会生成不同键", as
   assert.equal(keys.length, 2);
   assert.notEqual(keys[0], keys[1]);
 });
+
+test('slow response body shares the request deadline', async t => {
+  let signal;
+  t.mock.method(globalThis,'fetch',async (_url,init)=>{
+    signal=init.signal;
+    return new Response(new ReadableStream({start(controller){ signal.addEventListener('abort',()=>controller.error(new Error('aborted')),{once:true}); }}));
+  });
+  const start=Date.now();
+  await assert.rejects(fetchWithRetry('https://offline.invalid',{}, {label:'slow body',timeoutMs:2000,attempts:1}), /请求失败/);
+  assert.equal(signal.aborted,true); assert.ok(Date.now()-start<3500);
+});
+test('numeric configuration clamps endpoints and only malformed values use fallback', async () => {
+  const {clampNumber}=await import('../.test-dist/src/utils.js');
+  assert.equal(clampNumber('0',2000,1,10000),1);
+  assert.equal(clampNumber('999999',2000,1,10000),10000);
+  assert.equal(clampNumber('garbage',2000,1,10000),2000);
+});

@@ -55,19 +55,29 @@ export async function fetchWithRetry(
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let rejectDeadline: (reason: Error) => void = () => undefined;
+    const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
+    const timeout = setTimeout(() => {
+      controller.abort();
+      rejectDeadline(new Error('请求及响应正文读取超时'));
+    }, timeoutMs);
     try {
       // Cloudflare Workers 只支持 "follow" 和 "manual"，不接受 Node 的 "error"。
       // 用 "manual" 保持"不跟随外部重定向"的安全语义；3xx 会因 response.ok 为 false 而显式失败。
-      const response = await fetch(input, {
+      const response = await Promise.race([fetch(input, {
         ...init,
         redirect: "manual",
         signal: controller.signal,
+      }), deadline]);
+      // 正文与响应头共用同一期限，返回给调用者的是已完整读到的响应。
+      const body = await Promise.race([response.arrayBuffer(), deadline]);
+      const completeResponse = new Response([204, 205, 304].includes(response.status) ? null : body, {
+        status: response.status, statusText: response.statusText, headers: response.headers,
       });
-      if (response.ok) return response;
+      if (response.ok) return completeResponse;
 
       const retryable = response.status === 429 || response.status >= 500;
-      if (!retryable || attempt === attempts) return response;
+      if (!retryable || attempt === attempts) return completeResponse;
 
       const retryAfter = parseRetryAfter(response.headers.get("retry-after"));
       await response.body?.cancel().catch(() => undefined);

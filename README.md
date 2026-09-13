@@ -11,7 +11,7 @@
 - 单例 Durable Object 串行协调配置、手动检查与 Cron 检查
 - 管理 API 使用 `ADMIN_TOKEN` Bearer Token 保护；未设置时所有管理 API 拒绝访问
 - 默认仅在 `sessionStorage` 保存管理员口令，可由用户选择长期记住
-- CSP、安全响应头、请求体大小限制、外部请求超时和有限重试
+- CSP、安全响应头、请求体大小限制、外部请求和响应正文共用超时期限，对网络故障及429/5xx进行有限重试
 - 部署由 Cloudflare Workers Builds 自动完成；部署前自动运行类型检查与测试，失败则不会部署
 
 ## 界面风格
@@ -29,6 +29,10 @@
 - 默认只在当前浏览器会话保存 Token；勾选「长期记住」会写入 `localStorage`
 - 页面使用严格 CSP nonce，不使用动态 `innerHTML` 渲染服务端状态
 - 不要把 `.dev.vars`、Cloudflare Token、Resend Key、管理员口令或 NCBI Key 提交到 GitHub
+
+服务端在 Cloudflare Durable Object 中持续保存检索式、收件邮箱、已处理 PMID 和运行状态；有待发邮件时还保存收件人、主题及正文以便重试，完成或作废后清除待发内容。配置和状态没有自动过期时间：重建基线可重置处理记录，完整删除需由部署者删除对应 Durable Object 存储。
+
+检索式和配置的联系邮箱会发送给 NCBI；Resend 接收收件地址、邮件主题与正文，正文包含检索式及论文题录。管理员凭证的浏览器缓存与上述服务端业务存储彼此独立。
 
 ## 本地运行
 
@@ -60,6 +64,8 @@ npm run dev
 `.dev.vars` 已被 `.gitignore` 排除，禁止提交真实密钥。
 
 ## 部署
+
+对外版本以 GitHub Release 为准；应用版本由项目依赖清单维护，发布时同步更新。内部数据格式和算法机制版本独立演进。
 
 先登录并设置 Secrets：
 
