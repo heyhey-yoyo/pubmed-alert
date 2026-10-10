@@ -1,10 +1,10 @@
-# PubMed 关键词邮件提醒 — 项目说明（供 AI 编程代理阅读）
+# PubMed 关键词提醒 — 项目说明（供 AI 编程代理阅读）
 
 本文件供 AI 编码代理（Claude Code、Codex、Cursor 等）使用。修改代码前请先阅读本文件。
 
 ## 项目概览
 
-面向单用户的 PubMed 关键词邮件提醒工具。用户通过网页保存检索式和收件邮箱，Cloudflare Cron 每小时触发检查；发现新 PMID 时经 Resend 发送汇总邮件。
+面向单用户的 PubMed 关键词提醒工具。用户通过网页保存检索式和收件邮箱，Cloudflare Cron 每小时触发检查；发现新 PMID 时经 Resend 发送汇总邮件。
 
 核心工作流：Cron 触发 `scheduled`（`src/index.ts`）→ `AlertCoordinator`（Durable Object 单例，`runExclusive` 串行化）→ `AlertEngine`（`src/alert-engine.ts`）→ `NcbiPubMedGateway`（ESearch 按 Entry Date 窗口）→ `ResendMailGateway`。
 
@@ -44,6 +44,8 @@
 | `.dev.vars.example` | 本地 secrets 模板（5 个密钥） |
 | `.github/SECURITY.md` | 安全政策 |
 | `LICENSE` | MIT 许可证 |
+| `.gitignore` | Git 忽略规则 |
+| `README.md` / `AGENTS.md` | 用户向项目说明与 AI 代理维护说明 |
 
 ## 运行与构建
 
@@ -87,7 +89,7 @@ npm run check
 
 页眉背景和底部分隔线横跨页面可用宽度，内容区最大宽度 1280px（含两侧各 16px 内边距），整体居中；品牌和标题靠左，操作区靠右，窄屏换行后仍保持该对齐。品牌页眉在文档顶部正常排布，随页面滚走，不固定或吸顶；表格内部表头、侧边工具和手机底部导航可按功能保留。
 
-正文采用统一系统无衬线字体，默认 16px / 1.6；标题采用 Georgia、Times New Roman、Songti SC、STSong 衬线族。数字与代码可使用 SFMono-Regular、Consolas、Liberation Mono、Microsoft YaHei 等宽族。按钮和输入通常 15px，辅助文字 12–14px，密集科学数据允许有理由的局部调整。页面底色 #f3eee5、正文 #24221f、赤陶强调 #a94f31，柔和底色上的强调文字 #823a25；科学分类色、热图、作品主题与状态色保留必要区分度。
+正文采用统一系统无衬线字体，默认 16px / 1.6；标题采用 Georgia、Times New Roman、Songti SC、STSong 衬线族。数字与代码可使用 SFMono-Regular、Consolas、Liberation Mono、Microsoft YaHei 等宽族。按钮和输入通常 15px，辅助文字 12–14px，密集科学数据允许有理由的局部调整。页面底色 #f3eee5、正文 #24221f、赤陶强调 #a94f31；科学分类色、热图、作品主题与状态色保留必要区分度。
 
 主样式保留一个顶层 `:root`，条件规则和深色画布局部令牌独立维护，避免叠加重复主题或末尾覆盖层。修改视觉后核对实际渲染字体、字号、间距、对比度和操作可达性；至少检查 1440、820、390px，涉及断点时补查两侧宽度，涉及画布或存储时补查交互。构建、单测、本地浏览器和线上部署分别记录；发布后禁用缓存/硬刷新，并核对实际资源版本。
 

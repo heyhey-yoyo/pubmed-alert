@@ -1,4 +1,4 @@
-# PubMed 关键词邮件提醒
+# PubMed 关键词提醒
 
 一个面向单用户的 Cloudflare Worker：在网页中保存 PubMed 检索式和收件邮箱，Cloudflare Cron 每小时检查一次；发现新的 PMID 后，通过 Resend 发送汇总邮件。
 
