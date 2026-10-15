@@ -129,6 +129,6 @@ npm run check
 
 > **⚠️ 任何修改此项目的 AI 代理（包括未来的你自己）都必须遵守：**
 >
-> - 修改存储架构或检索语义（edat 窗口、MAX_RESULTS 暂停、幂等作废）前先读本文件与 README 相关章节
+> - 修改存储架构或检索语义（edat 窗口、MAX_RESULTS 暂停、幂等作废）前先读本文件与 [README.md](./README.md) 相关章节
 > - 新增 DO 内部接口必须经 `runExclusive` 串行化，并补充对应测试
 > - 部署前必须通过 `npm run check`
